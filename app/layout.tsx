@@ -3,6 +3,9 @@ import { Ubuntu_Sans } from "next/font/google";
 import "./globals.css";
 import Navbar from "./_components/Navbar";
 import { ThemeProvider } from "@/components/theme-provider";
+import Footer from "./_components/Footer";
+import { Toaster } from "react-hot-toast";
+import Providers from "./providers";
 
 const ubuntu = Ubuntu_Sans({ subsets: ["latin"] });
 
@@ -21,6 +24,7 @@ export default function RootLayout({
       <body suppressHydrationWarning
         className={ubuntu.className}
       >
+        <Providers>
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
@@ -29,7 +33,10 @@ export default function RootLayout({
           >
         <Navbar/>
         {children}
+        <Toaster position="top-center" />
+        <Footer/>
         </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
