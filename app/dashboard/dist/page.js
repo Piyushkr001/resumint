@@ -1,3 +1,4 @@
+"use client";
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -35,15 +36,244 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 exports.__esModule = true;
+var react_1 = require("react");
+var link_1 = require("next/link");
+// Toast-on-redirect helper
 var AlreadyToast_1 = require("./AlreadyToast");
-function DashboardPage() {
-    return __awaiter(this, void 0, void 0, function () {
-        return __generator(this, function (_a) {
-            return [2 /*return*/, (React.createElement(React.Fragment, null,
-                    React.createElement(AlreadyToast_1["default"], null),
-                    React.createElement("div", null, "Dashboard")))];
+// shadcn/ui
+var button_1 = require("@/components/ui/button");
+var input_1 = require("@/components/ui/input");
+var card_1 = require("@/components/ui/card");
+var badge_1 = require("@/components/ui/badge");
+var table_1 = require("@/components/ui/table");
+var progress_1 = require("@/components/ui/progress");
+var separator_1 = require("@/components/ui/separator");
+var avatar_1 = require("@/components/ui/avatar");
+var skeleton_1 = require("@/components/ui/skeleton");
+// icons
+var lucide_react_1 = require("lucide-react");
+/* ------------------------------------------------------------------ */
+/* Data hook (empty state until backend exists)                        */
+/* ------------------------------------------------------------------ */
+function useDashboardData() {
+    var _this = this;
+    var _a = react_1["default"].useState(false), loading = _a[0], setLoading = _a[1];
+    var _b = react_1["default"].useState(null), error = _b[0], setError = _b[1];
+    var _c = react_1["default"].useState({
+        kpis: [],
+        resumes: [],
+        insights: []
+    }), data = _c[0], setData = _c[1];
+    var load = react_1["default"].useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
+        var _a;
+        return __generator(this, function (_b) {
+            setLoading(true);
+            setError(null);
+            try {
+                // TODO: plug in backend when ready:
+                // const res = await fetch("/api/dashboard", { cache: "no-store" });
+                // if (!res.ok) throw new Error(await res.text());
+                // const json = (await res.json()) as DashboardData;
+                // setData(json);
+                // For now, empty state:
+                setData({ kpis: [], resumes: [], insights: [] });
+            }
+            catch (e) {
+                setError((_a = e === null || e === void 0 ? void 0 : e.message) !== null && _a !== void 0 ? _a : "Failed to load dashboard");
+            }
+            finally {
+                setLoading(false);
+            }
+            return [2 /*return*/];
         });
-    });
+    }); }, []);
+    react_1["default"].useEffect(function () { load(); }, [load]);
+    return { loading: loading, error: error, data: data, reload: load };
+}
+/* ------------------------------------------------------------------ */
+/* UI Parts                                                            */
+/* ------------------------------------------------------------------ */
+function HeaderBar(props) {
+    var onReload = props.onReload, loading = props.loading;
+    return (react_1["default"].createElement("div", { className: "flex flex-col gap-4 md:flex-row md:items-center md:justify-between" },
+        react_1["default"].createElement("div", null,
+            react_1["default"].createElement("h1", { className: "text-2xl font-semibold tracking-tight" }, "Dashboard"),
+            react_1["default"].createElement("p", { className: "text-sm text-muted-foreground" }, "Overview of your resumes, ATS score and activity.")),
+        react_1["default"].createElement("div", { className: "flex w-full gap-2 md:w-auto" },
+            react_1["default"].createElement("div", { className: "relative w-full md:w-80" },
+                react_1["default"].createElement(lucide_react_1.Search, { className: "pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" }),
+                react_1["default"].createElement(input_1.Input, { placeholder: "Search resumes\u2026", className: "pl-9" })),
+            react_1["default"].createElement(button_1.Button, { asChild: true, className: "whitespace-nowrap" },
+                react_1["default"].createElement(link_1["default"], { href: "/resumes/new" },
+                    react_1["default"].createElement(lucide_react_1.Plus, { className: "mr-2 h-4 w-4" }),
+                    "New Resume")),
+            react_1["default"].createElement(button_1.Button, { variant: "outline", onClick: onReload, disabled: loading, className: "whitespace-nowrap" },
+                react_1["default"].createElement(lucide_react_1.RefreshCcw, { className: "mr-2 h-4 w-4 " + (loading ? "animate-spin" : "") }),
+                "Refresh"))));
+}
+function KpiSkeleton() {
+    return (react_1["default"].createElement(card_1.Card, { className: "border-border/60" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-2" },
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-3 w-24" }),
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "mt-2 h-8 w-16" })),
+        react_1["default"].createElement(card_1.CardFooter, { className: "pt-0" },
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-6 w-16 rounded-full" }))));
+}
+function KpiCards(_a) {
+    var items = _a.items;
+    if (!items.length) {
+        // Show a simple empty state banner instead of cards
+        return (react_1["default"].createElement("div", { className: "mt-6 rounded-md border border-dashed p-4 text-sm text-muted-foreground" }, "KPI metrics will appear here once you start creating resumes and the backend is connected."));
+    }
+    return (react_1["default"].createElement("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" }, items.map(function (k) { return (react_1["default"].createElement(card_1.Card, { key: k.label, className: "border-border/60" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-2" },
+            react_1["default"].createElement(card_1.CardDescription, { className: "text-xs" }, k.label),
+            react_1["default"].createElement(card_1.CardTitle, { className: "text-3xl font-bold" }, k.value)),
+        react_1["default"].createElement(card_1.CardFooter, { className: "pt-0" },
+            react_1["default"].createElement(badge_1.Badge, { variant: k.up ? "default" : "secondary", className: "gap-1 " + (k.up ? "bg-emerald-600 hover:bg-emerald-600" : "") },
+                k.up ? react_1["default"].createElement(lucide_react_1.ArrowUpRight, { className: "h-3.5 w-3.5" }) : react_1["default"].createElement(lucide_react_1.ArrowDownRight, { className: "h-3.5 w-3.5" }),
+                k.delta)))); })));
+}
+function RecentResumesSkeleton() {
+    return (react_1["default"].createElement(card_1.Card, { className: "border-border/60 lg:col-span-2" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-3" },
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-4 w-32" }),
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "mt-2 h-3 w-56" })),
+        react_1["default"].createElement(card_1.CardContent, { className: "space-y-3 pt-0" }, __spreadArrays(Array(4)).map(function (_, i) { return (react_1["default"].createElement("div", { key: i, className: "flex items-center justify-between rounded-md border p-3" },
+            react_1["default"].createElement("div", { className: "flex items-center gap-3" },
+                react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-7 w-7 rounded-full" }),
+                react_1["default"].createElement("div", { className: "space-y-2" },
+                    react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-4 w-48" }),
+                    react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-3 w-24" }))),
+            react_1["default"].createElement("div", { className: "flex gap-2" },
+                react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-8 w-16" }),
+                react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-8 w-8" })))); }))));
+}
+function RecentResumes(_a) {
+    var rows = _a.rows;
+    if (!rows.length) {
+        return (react_1["default"].createElement(card_1.Card, { className: "border-border/60 lg:col-span-2" },
+            react_1["default"].createElement(card_1.CardHeader, { className: "pb-3" },
+                react_1["default"].createElement(card_1.CardTitle, null, "Recent Resumes"),
+                react_1["default"].createElement(card_1.CardDescription, null, "You haven\u2019t created any resume yet.")),
+            react_1["default"].createElement(card_1.CardContent, { className: "pt-0" },
+                react_1["default"].createElement("div", { className: "flex flex-col items-center justify-center rounded-lg border border-dashed p-8 text-center" },
+                    react_1["default"].createElement("p", { className: "text-sm text-muted-foreground mb-4" }, "Start by creating your first resume with our templates."),
+                    react_1["default"].createElement(button_1.Button, { asChild: true },
+                        react_1["default"].createElement(link_1["default"], { href: "/resumes/new" },
+                            react_1["default"].createElement(lucide_react_1.Plus, { className: "mr-2 h-4 w-4" }),
+                            "Create Resume"))))));
+    }
+    return (react_1["default"].createElement(card_1.Card, { className: "border-border/60 lg:col-span-2" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-3" },
+            react_1["default"].createElement(card_1.CardTitle, null, "Recent Resumes"),
+            react_1["default"].createElement(card_1.CardDescription, null, "Latest updates across your workspace")),
+        react_1["default"].createElement(card_1.CardContent, { className: "pt-0" },
+            react_1["default"].createElement("div", { className: "rounded-lg border" },
+                react_1["default"].createElement(table_1.Table, null,
+                    react_1["default"].createElement(table_1.TableHeader, null,
+                        react_1["default"].createElement(table_1.TableRow, null,
+                            react_1["default"].createElement(table_1.TableHead, null, "Resume"),
+                            react_1["default"].createElement(table_1.TableHead, { className: "hidden md:table-cell" }, "Template"),
+                            react_1["default"].createElement(table_1.TableHead, null, "ATS"),
+                            react_1["default"].createElement(table_1.TableHead, { className: "hidden sm:table-cell" }, "Updated"),
+                            react_1["default"].createElement(table_1.TableHead, { className: "text-right" }, "Actions"))),
+                    react_1["default"].createElement(table_1.TableBody, null, rows.map(function (r) { return (react_1["default"].createElement(table_1.TableRow, { key: r.id },
+                        react_1["default"].createElement(table_1.TableCell, { className: "font-medium" },
+                            react_1["default"].createElement("div", { className: "flex items-center gap-2" },
+                                react_1["default"].createElement(avatar_1.Avatar, { className: "h-7 w-7" },
+                                    react_1["default"].createElement(avatar_1.AvatarFallback, null, "CV")),
+                                react_1["default"].createElement("div", { className: "flex flex-col" },
+                                    react_1["default"].createElement("span", { className: "truncate" }, r.title),
+                                    react_1["default"].createElement("span", { className: "text-xs text-muted-foreground md:hidden" }, r.template)))),
+                        react_1["default"].createElement(table_1.TableCell, { className: "hidden md:table-cell" }, r.template),
+                        react_1["default"].createElement(table_1.TableCell, null,
+                            react_1["default"].createElement(badge_1.Badge, { variant: r.ats >= 85 ? "default" : "secondary" }, r.ats)),
+                        react_1["default"].createElement(table_1.TableCell, { className: "hidden sm:table-cell" }, r.updatedAt),
+                        react_1["default"].createElement(table_1.TableCell, { className: "text-right" },
+                            react_1["default"].createElement("div", { className: "flex justify-end gap-2" },
+                                react_1["default"].createElement(button_1.Button, { asChild: true, size: "sm", variant: "outline", className: "h-8 px-3" },
+                                    react_1["default"].createElement(link_1["default"], { href: "/resumes/" + r.id },
+                                        react_1["default"].createElement(lucide_react_1.FileText, { className: "mr-1.5 h-4 w-4" }),
+                                        "Open")),
+                                react_1["default"].createElement(button_1.Button, { size: "sm", variant: "ghost", className: "h-8 px-2" },
+                                    react_1["default"].createElement(lucide_react_1.Download, { className: "h-4 w-4" })))))); }))))),
+        react_1["default"].createElement(card_1.CardFooter, { className: "justify-end" },
+            react_1["default"].createElement(button_1.Button, { asChild: true, variant: "ghost", size: "sm" },
+                react_1["default"].createElement(link_1["default"], { href: "/resumes" }, "View all")))));
+}
+function InsightsSkeleton() {
+    return (react_1["default"].createElement(card_1.Card, { className: "border-border/60" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-3" },
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-4 w-36" }),
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "mt-2 h-3 w-56" })),
+        react_1["default"].createElement(card_1.CardContent, { className: "space-y-4" }, __spreadArrays(Array(4)).map(function (_, i) { return (react_1["default"].createElement("div", { key: i, className: "space-y-2" },
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-3 w-48" }),
+            react_1["default"].createElement(skeleton_1.Skeleton, { className: "h-2 w-full" }))); }))));
+}
+function Insights(_a) {
+    var items = _a.items;
+    return (react_1["default"].createElement(card_1.Card, { className: "border-border/60" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-3" },
+            react_1["default"].createElement(card_1.CardTitle, null, "Improvement Insights"),
+            react_1["default"].createElement(card_1.CardDescription, null, "Where to focus next")),
+        react_1["default"].createElement(card_1.CardContent, { className: "space-y-4" }, items.length === 0 ? (react_1["default"].createElement("p", { className: "text-sm text-muted-foreground" }, "No insights yet. Create a resume to see suggestions here.")) : (items.map(function (it) { return (react_1["default"].createElement("div", { key: it.name, className: "space-y-1.5" },
+            react_1["default"].createElement("div", { className: "flex items-center justify-between" },
+                react_1["default"].createElement("span", { className: "text-sm" }, it.name),
+                react_1["default"].createElement("span", { className: "text-xs text-muted-foreground" },
+                    it.progress,
+                    "%")),
+            react_1["default"].createElement(progress_1.Progress, { value: it.progress }))); })))));
+}
+function QuickActions() {
+    return (react_1["default"].createElement(card_1.Card, { className: "border-border/60" },
+        react_1["default"].createElement(card_1.CardHeader, { className: "pb-3" },
+            react_1["default"].createElement(card_1.CardTitle, null, "Quick Actions"),
+            react_1["default"].createElement(card_1.CardDescription, null, "Jump back into work")),
+        react_1["default"].createElement(card_1.CardContent, { className: "grid gap-2" },
+            react_1["default"].createElement(button_1.Button, { asChild: true },
+                react_1["default"].createElement(link_1["default"], { href: "/resumes/new" },
+                    react_1["default"].createElement(lucide_react_1.Plus, { className: "mr-2 h-4 w-4" }),
+                    "Create New Resume")),
+            react_1["default"].createElement(button_1.Button, { asChild: true, variant: "outline" },
+                react_1["default"].createElement(link_1["default"], { href: "/templates" }, "Browse Templates")),
+            react_1["default"].createElement(button_1.Button, { asChild: true, variant: "ghost" },
+                react_1["default"].createElement(link_1["default"], { href: "/uploads" }, "Import from PDF"))),
+        react_1["default"].createElement(separator_1.Separator, null),
+        react_1["default"].createElement(card_1.CardFooter, { className: "justify-between text-xs text-muted-foreground" },
+            react_1["default"].createElement("span", null, "Need help?"),
+            react_1["default"].createElement(link_1["default"], { href: "/docs", className: "underline underline-offset-4" }, "Read the docs"))));
+}
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
+function DashboardPage() {
+    var _a = useDashboardData(), loading = _a.loading, error = _a.error, data = _a.data, reload = _a.reload;
+    return (react_1["default"].createElement(react_1["default"].Fragment, null,
+        react_1["default"].createElement(AlreadyToast_1["default"], null),
+        react_1["default"].createElement("div", { className: "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6" },
+            react_1["default"].createElement(HeaderBar, { onReload: reload, loading: loading }),
+            error && (react_1["default"].createElement("div", { className: "mt-4 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm" },
+                react_1["default"].createElement("b", null, "Error:"),
+                " ",
+                error)),
+            loading ? (react_1["default"].createElement("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" }, __spreadArrays(Array(4)).map(function (_, i) { return react_1["default"].createElement(KpiSkeleton, { key: i }); }))) : (react_1["default"].createElement(KpiCards, { items: data.kpis })),
+            react_1["default"].createElement("div", { className: "mt-6 grid gap-4 lg:grid-cols-3" }, loading ? (react_1["default"].createElement(react_1["default"].Fragment, null,
+                react_1["default"].createElement(RecentResumesSkeleton, null),
+                react_1["default"].createElement("div", { className: "grid gap-4" },
+                    react_1["default"].createElement(InsightsSkeleton, null),
+                    react_1["default"].createElement(QuickActions, null)))) : (react_1["default"].createElement(react_1["default"].Fragment, null,
+                react_1["default"].createElement(RecentResumes, { rows: data.resumes }),
+                react_1["default"].createElement("div", { className: "grid gap-4" },
+                    react_1["default"].createElement(Insights, { items: data.insights }),
+                    react_1["default"].createElement(QuickActions, null))))))));
 }
 exports["default"] = DashboardPage;

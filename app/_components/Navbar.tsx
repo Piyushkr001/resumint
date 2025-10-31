@@ -18,6 +18,7 @@ type Me = { id: string; name: string | null; email: string; imageUrl?: string | 
 const menuItems = [
   { title: "Home", path: "/" },
   { title: "Dashboard", path: "/dashboard" },
+  { title: "Templates", path: "/templates" },
   { title: "About", path: "/about" },
   { title: "Contact", path: "/contact" },
 ];
@@ -31,10 +32,23 @@ export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const { data: me, isLoading, mutate } = useSWR("me", fetchMe, { revalidateOnFocus: true, revalidateOnReconnect: true, shouldRetryOnError: false });
+
+  const { data: me, isLoading, mutate } = useSWR("me", fetchMe, {
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    shouldRetryOnError: false
+  });
+
   const isActive = (p: string) => pathname === p;
 
+  // If user is not logged in, clicking "Dashboard" should go to login with redirect
+  const getHref = (path: string) => {
+    if (path === "/dashboard" && !me) return "/login?next=/dashboard";
+    return path;
+  };
+
   useEffect(() => { setOpen(false); }, [pathname]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia("(min-width: 768px)");
@@ -47,7 +61,6 @@ export default function Navbar() {
     };
   }, []);
 
-  // 🔁 revalidate when anyone fires the event
   useEffect(() => {
     const onAuthChanged = () => mutate();
     window.addEventListener("auth:changed", onAuthChanged);
@@ -71,14 +84,27 @@ export default function Navbar() {
           <Image className="hidden dark:block" src="/Images/Logo/logo-dark.svg" alt="Resumint" width={180} height={180} priority />
         </Link>
 
+        {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
           {menuItems.map((item) => (
-            <Button key={item.path} asChild variant="ghost" size="sm" className={`px-3 ${isActive(item.path) ? "bg-muted font-medium" : ""}`}>
-              <Link href={item.path} aria-current={isActive(item.path) ? "page" : undefined}>{item.title}</Link>
+            <Button
+              key={item.path}
+              asChild
+              variant="ghost"
+              size="sm"
+              className={`px-3 ${isActive(item.path) ? "bg-muted font-medium" : ""}`}
+            >
+              <Link
+                href={getHref(item.path)}
+                aria-current={isActive(item.path) ? "page" : undefined}
+              >
+                {item.title}
+              </Link>
             </Button>
           ))}
         </nav>
 
+        {/* Desktop Right */}
         <div className="hidden md:flex items-center gap-2">
           <ModeToggle />
           {isLoading ? (
@@ -109,9 +135,15 @@ export default function Navbar() {
           )}
         </div>
 
+        {/* Mobile */}
         <div className="md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Open menu"><Menu className="h-5 w-5" /></Button></SheetTrigger>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Open menu">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+
             <SheetContent side="right" className="w-80 bg-background/95 text-foreground backdrop-blur supports-backdrop-filter:bg-background/85">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
@@ -126,8 +158,17 @@ export default function Navbar() {
               <nav className="grid gap-1">
                 {menuItems.map((item) => (
                   <SheetClose asChild key={item.path}>
-                    <Button asChild variant={isActive(item.path) ? "secondary" : "ghost"} className="justify-start">
-                      <Link href={item.path} aria-current={isActive(item.path) ? "page" : undefined}>{item.title}</Link>
+                    <Button
+                      asChild
+                      variant={isActive(item.path) ? "secondary" : "ghost"}
+                      className="justify-start"
+                    >
+                      <Link
+                        href={getHref(item.path)}
+                        aria-current={isActive(item.path) ? "page" : undefined}
+                      >
+                        {item.title}
+                      </Link>
                     </Button>
                   </SheetClose>
                 ))}

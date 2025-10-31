@@ -51,6 +51,7 @@ var ModeToggle_1 = require("@/components/ModeToggle");
 var menuItems = [
     { title: "Home", path: "/" },
     { title: "Dashboard", path: "/dashboard" },
+    { title: "Templates", path: "/templates" },
     { title: "About", path: "/about" },
     { title: "Contact", path: "/contact" },
 ];
@@ -78,8 +79,18 @@ function Navbar() {
     var pathname = navigation_1.usePathname();
     var router = navigation_1.useRouter();
     var _c = react_1.useState(false), open = _c[0], setOpen = _c[1];
-    var _d = swr_1["default"]("me", fetchMe, { revalidateOnFocus: true, revalidateOnReconnect: true, shouldRetryOnError: false }), me = _d.data, isLoading = _d.isLoading, mutate = _d.mutate;
+    var _d = swr_1["default"]("me", fetchMe, {
+        revalidateOnFocus: true,
+        revalidateOnReconnect: true,
+        shouldRetryOnError: false
+    }), me = _d.data, isLoading = _d.isLoading, mutate = _d.mutate;
     var isActive = function (p) { return pathname === p; };
+    // If user is not logged in, clicking "Dashboard" should go to login with redirect
+    var getHref = function (path) {
+        if (path === "/dashboard" && !me)
+            return "/login?next=/dashboard";
+        return path;
+    };
     react_1.useEffect(function () { setOpen(false); }, [pathname]);
     react_1.useEffect(function () {
         var _a, _b;
@@ -96,7 +107,6 @@ function Navbar() {
             (_b = mql.removeListener) === null || _b === void 0 ? void 0 : _b.call(mql, handler);
         };
     }, []);
-    // 🔁 revalidate when anyone fires the event
     react_1.useEffect(function () {
         var onAuthChanged = function () { return mutate(); };
         window.addEventListener("auth:changed", onAuthChanged);
@@ -129,7 +139,7 @@ function Navbar() {
                 React.createElement(image_1["default"], { className: "block dark:hidden", src: "/Images/Logo/logo.svg", alt: "Resumint", width: 180, height: 180, priority: true }),
                 React.createElement(image_1["default"], { className: "hidden dark:block", src: "/Images/Logo/logo-dark.svg", alt: "Resumint", width: 180, height: 180, priority: true })),
             React.createElement("nav", { className: "hidden md:flex items-center gap-1" }, menuItems.map(function (item) { return (React.createElement(button_1.Button, { key: item.path, asChild: true, variant: "ghost", size: "sm", className: "px-3 " + (isActive(item.path) ? "bg-muted font-medium" : "") },
-                React.createElement(link_1["default"], { href: item.path, "aria-current": isActive(item.path) ? "page" : undefined }, item.title))); })),
+                React.createElement(link_1["default"], { href: getHref(item.path), "aria-current": isActive(item.path) ? "page" : undefined }, item.title))); })),
             React.createElement("div", { className: "hidden md:flex items-center gap-2" },
                 React.createElement(ModeToggle_1.ModeToggle, null),
                 isLoading ? (React.createElement(button_1.Button, { variant: "ghost", size: "sm", disabled: true, className: "px-3" }, "\u2026")) : me ? (React.createElement(React.Fragment, null,
@@ -160,7 +170,7 @@ function Navbar() {
                         React.createElement(separator_1.Separator, { className: "my-4" }),
                         React.createElement("nav", { className: "grid gap-1" }, menuItems.map(function (item) { return (React.createElement(sheet_1.SheetClose, { asChild: true, key: item.path },
                             React.createElement(button_1.Button, { asChild: true, variant: isActive(item.path) ? "secondary" : "ghost", className: "justify-start" },
-                                React.createElement(link_1["default"], { href: item.path, "aria-current": isActive(item.path) ? "page" : undefined }, item.title)))); })),
+                                React.createElement(link_1["default"], { href: getHref(item.path), "aria-current": isActive(item.path) ? "page" : undefined }, item.title)))); })),
                         React.createElement(separator_1.Separator, { className: "my-4" }),
                         React.createElement("div", { className: "grid gap-2" },
                             isLoading ? (React.createElement(button_1.Button, { variant: "ghost", disabled: true }, "\u2026")) : me ? (React.createElement(button_1.Button, { variant: "outline", onClick: function () { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
