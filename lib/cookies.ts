@@ -1,28 +1,24 @@
-// lib/cookies.ts
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 const isProd = process.env.NODE_ENV === "production";
 
-export function attachAuthCookies(res: NextResponse, sessionJwt: string, refreshJwt: string) {
-  res.cookies.set("session", sessionJwt, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProd,   // false on localhost
-    path: "/",
-    maxAge: 60 * 15,  // 15m
-  });
-  res.cookies.set("refresh", refreshJwt, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: isProd,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7d
-  });
+// Set when you *don't* already have a NextResponse
+export async function setAuthCookies(access: string, refresh: string) {
+  const jar = await cookies();
+  jar.set("session", access,  { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: 60 * 15 });
+  jar.set("refresh", refresh, { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
+}
+
+// Attach to an existing NextResponse (preferred in API routes)
+export function attachAuthCookies(res: NextResponse, access: string, refresh: string) {
+  res.cookies.set("session", access,  { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: 60 * 15 });
+  res.cookies.set("refresh", refresh, { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 7 });
   return res;
 }
 
-export function clearAuthCookies(res: NextResponse) {
-  res.cookies.set("session", "", { httpOnly: true, sameSite: "lax", secure: isProd, path: "/", maxAge: 0 });
-  res.cookies.set("refresh", "", { httpOnly: true, sameSite: "lax", secure: isProd, path: "/", maxAge: 0 });
-  return res;
+export async function clearAuthCookies() {
+  const jar = await cookies();
+  jar.set("session", "", { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: 0 });
+  jar.set("refresh", "", { httpOnly: true, secure: isProd, sameSite: "lax", path: "/", maxAge: 0 });
 }

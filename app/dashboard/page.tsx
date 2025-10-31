@@ -1,9 +1,13 @@
-import React from 'react'
+import AlreadyToast from "./AlreadyToast";
 
-function Dashboard() {
+export default async function DashboardPage() {
   return (
-    <div>Dashboard</div>
-  )
+    <>
+      <AlreadyToast />
+      {/* ...your dashboard UI... */}
+      <div>
+        Dashboard
+      </div>
+    </>
+  );
 }
-
-export default Dashboard

@@ -36,10 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.POST = exports.dynamic = exports.runtime = void 0;
-// app/api/auth/logout/route.ts
-exports.runtime = "nodejs";
-exports.dynamic = "force-dynamic";
+exports.POST = void 0;
 var server_1 = require("next/server");
 var headers_1 = require("next/headers");
 var jwt_1 = require("@/lib/jwt");
@@ -49,40 +46,36 @@ var schema_1 = require("@/config/schema");
 var cookies_1 = require("@/lib/cookies");
 var db_1 = require("@/config/db");
 function POST() {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a;
     return __awaiter(this, void 0, void 0, function () {
-        var jar, refresh, out, userId, jti, _h, res;
-        return __generator(this, function (_j) {
-            switch (_j.label) {
-                case 0:
-                    jar = headers_1.cookies();
-                    return [4 /*yield*/, jar];
+        var jar, refresh, payload, jtiHash, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0: return [4 /*yield*/, headers_1.cookies()];
                 case 1:
-                    refresh = (_a = (_j.sent()).get("refresh")) === null || _a === void 0 ? void 0 : _a.value;
-                    if (!refresh) return [3 /*break*/, 7];
-                    _j.label = 2;
+                    jar = _c.sent();
+                    refresh = (_a = jar.get("refresh")) === null || _a === void 0 ? void 0 : _a.value;
+                    if (!refresh) return [3 /*break*/, 6];
+                    _c.label = 2;
                 case 2:
-                    _j.trys.push([2, 6, , 7]);
+                    _c.trys.push([2, 5, , 6]);
                     return [4 /*yield*/, jwt_1.verifyRefreshToken(refresh)];
                 case 3:
-                    out = _j.sent();
-                    userId = String((_c = (_b = out === null || out === void 0 ? void 0 : out.payload) === null || _b === void 0 ? void 0 : _b.sub) !== null && _c !== void 0 ? _c : "");
-                    jti = (_e = (_d = out) === null || _d === void 0 ? void 0 : _d.jti) !== null && _e !== void 0 ? _e : String((_g = (_f = out === null || out === void 0 ? void 0 : out.payload) === null || _f === void 0 ? void 0 : _f.jti) !== null && _g !== void 0 ? _g : "");
-                    if (!(userId && jti)) return [3 /*break*/, 5];
-                    return [4 /*yield*/, db_1.db
-                            .update(schema_1.refreshTokensTable)
+                    payload = (_c.sent()).payload;
+                    jtiHash = crypto_1.sha256(String(payload.jti));
+                    return [4 /*yield*/, db_1.db.update(schema_1.refreshTokensTable)
                             .set({ revoked: true })
-                            .where(drizzle_orm_1.and(drizzle_orm_1.eq(schema_1.refreshTokensTable.userId, userId), drizzle_orm_1.eq(schema_1.refreshTokensTable.jtiHash, crypto_1.sha256(jti)), drizzle_orm_1.eq(schema_1.refreshTokensTable.revoked, false)))];
+                            .where(drizzle_orm_1.and(drizzle_orm_1.eq(schema_1.refreshTokensTable.userId, String(payload.sub)), drizzle_orm_1.eq(schema_1.refreshTokensTable.jtiHash, jtiHash), drizzle_orm_1.eq(schema_1.refreshTokensTable.revoked, false)))];
                 case 4:
-                    _j.sent();
-                    _j.label = 5;
-                case 5: return [3 /*break*/, 7];
-                case 6:
-                    _h = _j.sent();
-                    return [3 /*break*/, 7];
+                    _c.sent();
+                    return [3 /*break*/, 6];
+                case 5:
+                    _b = _c.sent();
+                    return [3 /*break*/, 6];
+                case 6: return [4 /*yield*/, cookies_1.clearAuthCookies()];
                 case 7:
-                    res = server_1.NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
-                    return [2 /*return*/, cookies_1.clearAuthCookies(res)]; // <- this must mutate and return `res`
+                    _c.sent();
+                    return [2 /*return*/, server_1.NextResponse.json({ ok: true })];
             }
         });
     });

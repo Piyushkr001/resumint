@@ -37,51 +37,62 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 exports.__esModule = true;
 exports.POST = exports.dynamic = exports.runtime = void 0;
-// app/api/auth/login/route.ts
 exports.runtime = "nodejs";
 exports.dynamic = "force-dynamic";
 var server_1 = require("next/server");
+var headers_1 = require("next/headers");
 var bcryptjs_1 = require("bcryptjs");
-var drizzle_orm_1 = require("drizzle-orm");
+var db_1 = require("@/config/db");
 var schema_1 = require("@/config/schema");
+var drizzle_orm_1 = require("drizzle-orm");
 var crypto_1 = require("@/lib/crypto");
 var jwt_1 = require("@/lib/jwt");
 var cookies_1 = require("@/lib/cookies");
-var db_1 = require("@/config/db");
 function POST(req) {
-    var _a, _b;
+    var _a, _b, _c;
     return __awaiter(this, void 0, void 0, function () {
-        var _c, email, password, normalizedEmail, user, ok, jti, session, refresh, res;
-        return __generator(this, function (_d) {
-            switch (_d.label) {
-                case 0: return [4 /*yield*/, req.json()];
+        var jar, existing, _d, _e, email, password, normalizedEmail, user, ok, jti, session, refresh, res;
+        return __generator(this, function (_f) {
+            switch (_f.label) {
+                case 0: return [4 /*yield*/, headers_1.cookies()];
                 case 1:
-                    _c = _d.sent(), email = _c.email, password = _c.password;
-                    if (!email || !password) {
+                    jar = _f.sent();
+                    existing = (_a = jar.get("refresh")) === null || _a === void 0 ? void 0 : _a.value;
+                    if (!existing) return [3 /*break*/, 5];
+                    _f.label = 2;
+                case 2:
+                    _f.trys.push([2, 4, , 5]);
+                    return [4 /*yield*/, jwt_1.verifyRefreshToken(existing)];
+                case 3:
+                    _f.sent();
+                    return [2 /*return*/, server_1.NextResponse.json({ error: "Already logged in" }, { status: 409 })];
+                case 4:
+                    _d = _f.sent();
+                    return [3 /*break*/, 5];
+                case 5: return [4 /*yield*/, req.json()];
+                case 6:
+                    _e = _f.sent(), email = _e.email, password = _e.password;
+                    if (!email || !password)
                         return [2 /*return*/, server_1.NextResponse.json({ error: "Missing fields" }, { status: 400 })];
-                    }
                     normalizedEmail = String(email).toLowerCase().trim();
                     return [4 /*yield*/, db_1.db.query.usersTable.findFirst({
                             where: drizzle_orm_1.eq(schema_1.usersTable.email, normalizedEmail)
                         })];
-                case 2:
-                    user = _d.sent();
+                case 7:
+                    user = _f.sent();
                     if (!user || !user.passwordHash) {
-                        // passwordHash missing usually means social-only account
                         return [2 /*return*/, server_1.NextResponse.json({ error: "Invalid credentials" }, { status: 401 })];
                     }
                     return [4 /*yield*/, bcryptjs_1["default"].compare(password, user.passwordHash)];
-                case 3:
-                    ok = _d.sent();
+                case 8:
+                    ok = _f.sent();
                     if (!ok)
                         return [2 /*return*/, server_1.NextResponse.json({ error: "Invalid credentials" }, { status: 401 })];
-                    // update last login
                     return [4 /*yield*/, db_1.db.update(schema_1.usersTable)
                             .set({ lastLoginAt: new Date(), updatedAt: new Date() })
                             .where(drizzle_orm_1.eq(schema_1.usersTable.id, user.id))];
-                case 4:
-                    // update last login
-                    _d.sent();
+                case 9:
+                    _f.sent();
                     jti = crypto_1.randomJti();
                     return [4 /*yield*/, jwt_1.signAccessToken(user.id, {
                             role: user.role,
@@ -89,20 +100,20 @@ function POST(req) {
                             name: user.name,
                             imageUrl: user.imageUrl
                         })];
-                case 5:
-                    session = _d.sent();
+                case 10:
+                    session = _f.sent();
                     return [4 /*yield*/, jwt_1.signRefreshToken(user.id, jti)];
-                case 6:
-                    refresh = _d.sent();
+                case 11:
+                    refresh = _f.sent();
                     return [4 /*yield*/, db_1.db.insert(schema_1.refreshTokensTable).values({
                             userId: user.id,
                             jtiHash: crypto_1.sha256(jti),
-                            userAgent: (_a = req.headers.get("user-agent")) !== null && _a !== void 0 ? _a : undefined,
-                            ip: ((_b = req.headers.get("x-forwarded-for")) !== null && _b !== void 0 ? _b : "").split(",")[0] || undefined,
+                            userAgent: ((_b = req.headers.get("user-agent")) !== null && _b !== void 0 ? _b : undefined),
+                            ip: ((_c = req.headers.get("x-forwarded-for")) !== null && _c !== void 0 ? _c : "").split(",")[0] || undefined,
                             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
                         })];
-                case 7:
-                    _d.sent();
+                case 12:
+                    _f.sent();
                     res = server_1.NextResponse.json({
                         user: { id: user.id, name: user.name, email: user.email, role: user.role, imageUrl: user.imageUrl }
                     });

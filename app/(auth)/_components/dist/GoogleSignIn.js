@@ -42,78 +42,40 @@ var google_1 = require("@react-oauth/google");
 var axios_1 = require("axios");
 var react_hot_toast_1 = require("react-hot-toast");
 var navigation_1 = require("next/navigation");
-function parseJwtPayload(jwt) {
-    var _a, _b;
-    try {
-        var base64 = (_b = (_a = jwt.split(".")[1]) === null || _a === void 0 ? void 0 : _a.replace(/-/g, "+").replace(/_/g, "/")) !== null && _b !== void 0 ? _b : "";
-        var json = decodeURIComponent(atob(base64)
-            .split("")
-            .map(function (c) { return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2); })
-            .join(""));
-        return JSON.parse(json);
-    }
-    catch (_c) {
-        return {};
-    }
-}
-function GoogleSignIn(_a) {
-    var _b = _a.text, text = _b === void 0 ? "continue_with" : _b, _c = _a.width, width = _c === void 0 ? 320 : _c, _d = _a.debug, debug = _d === void 0 ? false : _d;
+function GoogleSignIn() {
     var router = navigation_1.useRouter();
-    var _e = react_1.useState(false), busy = _e[0], setBusy = _e[1];
+    var _a = react_1.useState(false), busy = _a[0], setBusy = _a[1];
     function handleSuccess(cred) {
         return __awaiter(this, void 0, void 0, function () {
-            var meta, req, _a;
-            return __generator(this, function (_b) {
-                switch (_b.label) {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
                     case 0:
-                        if (!cred.credential) {
-                            react_hot_toast_1["default"].error("Missing Google credential");
-                            return [2 /*return*/];
-                        }
-                        // Optional: debug token claims to quickly spot audience mismatches
-                        if (process.env.NODE_ENV !== "production" && debug) {
-                            meta = parseJwtPayload(cred.credential);
-                            // eslint-disable-next-line no-console
-                            console.log("[GoogleSignIn] jwt meta:", meta);
-                        }
+                        if (!cred.credential)
+                            return [2 /*return*/, react_hot_toast_1["default"].error("Missing Google credential")];
                         if (busy)
                             return [2 /*return*/];
                         setBusy(true);
-                        _b.label = 1;
+                        _a.label = 1;
                     case 1:
-                        _b.trys.push([1, 3, 4, 5]);
-                        req = axios_1["default"].post("/api/auth/google-credential", { credential: cred.credential }, {
-                            withCredentials: true,
-                            headers: { "Content-Type": "application/json" },
-                            timeout: 15000
-                        });
-                        return [4 /*yield*/, react_hot_toast_1["default"].promise(req, {
-                                loading: "Signing you in…",
-                                success: "Signed in with Google",
-                                error: function (err) { var _a, _b; return ((_b = (_a = err === null || err === void 0 ? void 0 : err.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.error) || "Google sign-in failed"; }
-                            })];
+                        _a.trys.push([1, , 3, 4]);
+                        return [4 /*yield*/, react_hot_toast_1["default"].promise(axios_1["default"].post("/api/auth/google-credential", { credential: cred.credential }, { withCredentials: true }), { loading: "Signing you in…", success: "Signed in with Google", error: function (e) { var _a, _b; return ((_b = (_a = e === null || e === void 0 ? void 0 : e.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.error) || "Google sign-in failed"; } })];
                     case 2:
-                        _b.sent();
-                        router.push("/dashboard");
-                        return [3 /*break*/, 5];
+                        _a.sent();
+                        // 🔔 update Navbar immediately
+                        window.dispatchEvent(new Event("auth:changed"));
+                        router.replace("/dashboard");
+                        return [3 /*break*/, 4];
                     case 3:
-                        _a = _b.sent();
-                        return [3 /*break*/, 5];
-                    case 4:
                         setBusy(false);
                         return [7 /*endfinally*/];
-                    case 5: return [2 /*return*/];
+                    case 4: return [2 /*return*/];
                 }
             });
         });
     }
-    function handleError() {
-        if (!busy)
-            react_hot_toast_1["default"].error("Google auth cancelled or failed");
-    }
     return (React.createElement("div", { className: "relative w-full" },
-        busy && (React.createElement("div", { className: "absolute inset-0 z-10 cursor-wait rounded-md bg-background/40 backdrop-blur-sm" })),
+        busy && React.createElement("div", { className: "absolute inset-0 z-10 cursor-wait rounded-md bg-background/40 backdrop-blur-sm" }),
         React.createElement("div", { className: "flex w-full justify-center" },
-            React.createElement(google_1.GoogleLogin, { onSuccess: handleSuccess, onError: handleError, text: text, theme: "outline", shape: "pill", width: String(width) }))));
+            React.createElement(google_1.GoogleLogin, { onSuccess: handleSuccess, onError: function () { return react_hot_toast_1["default"].error("Google auth cancelled or failed"); }, text: "continue_with", shape: "pill", theme: "outline", width: "320" }))));
 }
 exports["default"] = GoogleSignIn;

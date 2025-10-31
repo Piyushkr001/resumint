@@ -78,14 +78,8 @@ function Navbar() {
     var pathname = navigation_1.usePathname();
     var router = navigation_1.useRouter();
     var _c = react_1.useState(false), open = _c[0], setOpen = _c[1];
-    // SWR keeps this fresh automatically and on focus
-    var _d = swr_1["default"]("me", fetchMe, {
-        revalidateOnFocus: true,
-        revalidateOnReconnect: true,
-        shouldRetryOnError: false
-    }), me = _d.data, isLoading = _d.isLoading, mutate = _d.mutate;
+    var _d = swr_1["default"]("me", fetchMe, { revalidateOnFocus: true, revalidateOnReconnect: true, shouldRetryOnError: false }), me = _d.data, isLoading = _d.isLoading, mutate = _d.mutate;
     var isActive = function (p) { return pathname === p; };
-    // Sheet UX
     react_1.useEffect(function () { setOpen(false); }, [pathname]);
     react_1.useEffect(function () {
         var _a, _b;
@@ -102,7 +96,7 @@ function Navbar() {
             (_b = mql.removeListener) === null || _b === void 0 ? void 0 : _b.call(mql, handler);
         };
     }, []);
-    // Revalidate when someone fires the custom event
+    // 🔁 revalidate when anyone fires the event
     react_1.useEffect(function () {
         var onAuthChanged = function () { return mutate(); };
         window.addEventListener("auth:changed", onAuthChanged);
@@ -120,9 +114,9 @@ function Navbar() {
                         return [3 /*break*/, 4];
                     case 2: return [4 /*yield*/, mutate(null, { revalidate: false })];
                     case 3:
-                        _a.sent(); // flip UI instantly
+                        _a.sent();
                         router.push("/");
-                        window.dispatchEvent(new Event("auth:changed")); // keep other tabs/components in sync
+                        window.dispatchEvent(new Event("auth:changed"));
                         return [7 /*endfinally*/];
                     case 4: return [2 /*return*/];
                 }
@@ -144,7 +138,7 @@ function Navbar() {
                             me.imageUrl
                                 ? React.createElement("img", { src: me.imageUrl, alt: (_a = me.name) !== null && _a !== void 0 ? _a : me.email, className: "h-5 w-5 rounded-full" })
                                 : React.createElement(lucide_react_1.User, { className: "h-4 w-4" }),
-                            React.createElement("span", { className: "ml-2 hidden sm:inline max-w-[10rem] truncate" }, (_b = me.name) !== null && _b !== void 0 ? _b : me.email))),
+                            React.createElement("span", { className: "ml-2 hidden sm:inline max-w-40 truncate" }, (_b = me.name) !== null && _b !== void 0 ? _b : me.email))),
                     React.createElement(button_1.Button, { size: "sm", variant: "outline", onClick: onLogout },
                         React.createElement(lucide_react_1.LogOut, { className: "mr-2 h-4 w-4" }),
                         " Logout"))) : (React.createElement(React.Fragment, null,

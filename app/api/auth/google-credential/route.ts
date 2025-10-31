@@ -1,41 +1,40 @@
-// app/api/auth/google-credential/route.ts
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { createRemoteJWKSet, jwtVerify, decodeJwt, JWTPayload } from "jose";
-import { eq } from "drizzle-orm";
 import { db } from "@/config/db";
 import { usersTable, refreshTokensTable } from "@/config/schema";
+import { eq } from "drizzle-orm";
 import { randomJti, sha256 } from "@/lib/crypto";
-import { signAccessToken, signRefreshToken } from "@/lib/jwt";
-import { attachAuthCookies } from "@/lib/cookies"; // ✅ use attach-to-response helper
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "@/lib/jwt";
+import { attachAuthCookies } from "@/lib/cookies";
+
+export const runtime = "nodejs";
 
 const GOOGLE_JWKS = createRemoteJWKSet(new URL("https://www.googleapis.com/oauth2/v3/certs"));
 const GOOGLE_AUD = (process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || "").trim();
 
 export async function POST(req: Request) {
-  if (!GOOGLE_AUD) {
-    return NextResponse.json({ error: "Server misconfigured: missing Google client ID" }, { status: 500 });
+  if (!GOOGLE_AUD) return NextResponse.json({ error: "Server misconfigured: missing Google client ID" }, { status: 500 });
+
+  // 🚫 block if already logged in
+  const jar = await cookies();
+  const existing = jar.get("refresh")?.value;
+  if (existing) {
+    try { await verifyRefreshToken(existing); return NextResponse.json({ error: "Already logged in" }, { status: 409 }); }
+    catch {}
   }
 
   const { credential } = await req.json().catch(() => ({}));
-  if (!credential) {
-    return NextResponse.json({ error: "Missing credential" }, { status: 400 });
-  }
+  if (!credential) return NextResponse.json({ error: "Missing credential" }, { status: 400 });
 
-  // Debug (dev only)
   if (process.env.NODE_ENV !== "production") {
     try {
       const dbg = decodeJwt(credential);
-      console.log("[google-credential] token.aud:", (dbg as any).aud, "iss:", (dbg as any).iss, "envAUB:", GOOGLE_AUD);
+      console.log("[google-credential] aud:", (dbg as any).aud, "iss:", (dbg as any).iss, "envAUD:", GOOGLE_AUD);
     } catch {}
   }
 
-  // Verify Google token
-  let payload: JWTPayload & {
-    email?: string; email_verified?: boolean; name?: string; picture?: string; sub?: string;
-  };
+  let payload: JWTPayload & { email?: string; email_verified?: boolean; name?: string; picture?: string; sub?: string };
   try {
     const res = await jwtVerify(credential, GOOGLE_JWKS, {
       audience: GOOGLE_AUD,
@@ -56,15 +55,13 @@ export async function POST(req: Request) {
   try {
     const email = String(payload.email ?? "").toLowerCase();
     const sub = String(payload.sub ?? "");
-    if (!email || !sub) {
-      return NextResponse.json({ error: "Google did not return email/sub" }, { status: 400 });
-    }
+    if (!email || !sub) return NextResponse.json({ error: "Google did not return email/sub" }, { status: 400 });
 
     const emailVerified = Boolean(payload.email_verified);
     const name = String(payload.name ?? "Google User");
     const picture = String(payload.picture ?? "");
 
-    // Prefer providerId lookup; fallback to email for linking
+    // Prefer providerId match; fallback email
     let user =
       (await db.query.usersTable.findFirst({
         where: eq(usersTable.providerId, sub),
@@ -76,32 +73,28 @@ export async function POST(req: Request) {
       }));
 
     if (!user) {
-      // New Google-only user
       const created = await db
         .insert(usersTable)
         .values({
           name,
           email,
-          provider: "google",       // <- make sure this column exists
-          providerId: sub,          // <- and this one too
-          passwordHash: null,       // <- nullable for social accounts
+          provider: "google",
+          providerId: sub,
+          passwordHash: null,
           imageUrl: picture || null,
           emailVerifiedAt: emailVerified ? new Date() : null,
-          lastLoginAt: new Date(),
         })
-        .returning({
-          id: usersTable.id,
-          name: usersTable.name,
-          email: usersTable.email,
-          role: usersTable.role,
-          imageUrl: usersTable.imageUrl,
-        });
+        .onConflictDoNothing({ target: usersTable.email })
+        .returning({ id: usersTable.id, name: usersTable.name, email: usersTable.email, role: usersTable.role, imageUrl: usersTable.imageUrl });
 
-      user = created?.[0];
+      user =
+        created?.[0] ??
+        (await db.query.usersTable.findFirst({
+          where: eq(usersTable.email, email),
+          columns: { id: true, name: true, email: true, role: true, imageUrl: true },
+        }));
     } else {
-      // Link existing account to Google (idempotent) and refresh profile bits
-      await db
-        .update(usersTable)
+      await db.update(usersTable)
         .set({
           provider: "google",
           providerId: sub,
@@ -112,18 +105,10 @@ export async function POST(req: Request) {
         .where(eq(usersTable.id, user.id));
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "Failed to create or fetch user" }, { status: 500 });
-    }
+    if (!user) return NextResponse.json({ error: "Failed to create or fetch user" }, { status: 500 });
 
-    // Issue tokens & persist refresh
     const jti = randomJti();
-    const session = await signAccessToken(user.id, {
-      role: user.role,
-      email: user.email,
-      name: user.name,
-      imageUrl: user.imageUrl,
-    });
+    const access = await signAccessToken(user.id, { role: user.role, email: user.email });
     const refresh = await signRefreshToken(user.id, jti);
 
     await db.insert(refreshTokensTable).values({
@@ -134,11 +119,8 @@ export async function POST(req: Request) {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    // ✅ Attach cookies to the *same* response we return
-    const res = NextResponse.json({
-      user: { id: user.id, name: user.name, email: user.email, role: user.role, imageUrl: user.imageUrl },
-    });
-    return attachAuthCookies(res, session, refresh);
+    const res = NextResponse.json({ user });
+    return attachAuthCookies(res, access, refresh);
   } catch (err) {
     console.error("[google-credential] DB error:", err);
     return NextResponse.json({ error: "Database error" }, { status: 500 });

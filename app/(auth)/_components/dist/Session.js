@@ -1,3 +1,4 @@
+"use client";
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -36,14 +37,60 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-var AlreadyToast_1 = require("./AlreadyToast");
-function DashboardPage() {
-    return __awaiter(this, void 0, void 0, function () {
+exports.notifyAuthChanged = exports.useAuth = exports.AuthProvider = void 0;
+var React = require("react");
+var swr_1 = require("swr");
+var fetcher = function (url) {
+    return fetch(url, { credentials: "include", cache: "no-store" })
+        .then(function (r) { return __awaiter(void 0, void 0, void 0, function () { return __generator(this, function (_a) {
+        return [2 /*return*/, (r.ok ? r.json() : { user: null })];
+    }); }); })["catch"](function () { return ({ user: null }); });
+};
+var AuthCtx = React.createContext(null);
+function AuthProvider(_a) {
+    var _this = this;
+    var _b;
+    var children = _a.children;
+    var _c = swr_1["default"]("/api/auth/me", fetcher, {
+        revalidateOnFocus: false,
+        shouldRetryOnError: false
+    }), data = _c.data, isLoading = _c.isLoading, mutate = _c.mutate;
+    var _d = React.useState((_b = data === null || data === void 0 ? void 0 : data.user) !== null && _b !== void 0 ? _b : null), user = _d[0], setUserState = _d[1];
+    // sync when /api/auth/me changes
+    React.useEffect(function () {
+        var _a;
+        setUserState((_a = data === null || data === void 0 ? void 0 : data.user) !== null && _a !== void 0 ? _a : null);
+    }, [data === null || data === void 0 ? void 0 : data.user]);
+    var setUser = React.useCallback(function (u) {
+        setUserState(u);
+        // Optimistic SWR cache update so other consumers see it too
+        mutate({ user: u }, false);
+        // also poke any consumers not using context but hitting SWR directly
+        swr_1.mutate("/api/auth/me", { user: u }, false);
+    }, [mutate]);
+    var refresh = React.useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
-            return [2 /*return*/, (React.createElement(React.Fragment, null,
-                    React.createElement(AlreadyToast_1["default"], null),
-                    React.createElement("div", null, "Dashboard")))];
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, mutate()];
+                case 1:
+                    _a.sent(); // refetch /api/auth/me
+                    return [2 /*return*/];
+            }
         });
-    });
+    }); }, [mutate]);
+    return (React.createElement(AuthCtx.Provider, { value: { user: user, loading: isLoading, setUser: setUser, refresh: refresh } }, children));
 }
-exports["default"] = DashboardPage;
+exports.AuthProvider = AuthProvider;
+function useAuth() {
+    var ctx = React.useContext(AuthCtx);
+    if (!ctx)
+        throw new Error("useAuth must be used inside <AuthProvider />");
+    return ctx;
+}
+exports.useAuth = useAuth;
+// Optional: helper if you still want a window event
+function notifyAuthChanged() {
+    swr_1.mutate("/api/auth/me");
+    window.dispatchEvent(new Event("auth:changed"));
+}
+exports.notifyAuthChanged = notifyAuthChanged;

@@ -49,63 +49,65 @@ var jwt_1 = require("@/lib/jwt");
 var crypto_1 = require("@/lib/crypto");
 var isProd = process.env.NODE_ENV === "production";
 function GET() {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
     return __awaiter(this, void 0, void 0, function () {
-        var jar, session, userId, newSessionJwt, payload, _e, refresh, _f, payload, jti, uid, rec, _g, user, res;
-        return __generator(this, function (_h) {
-            switch (_h.label) {
+        var jar, session, userId, newSessionJwt, payload, _m, refresh, payload, uid, jti, rec, _o, user, res;
+        return __generator(this, function (_p) {
+            switch (_p.label) {
                 case 0:
                     jar = headers_1.cookies();
                     return [4 /*yield*/, jar];
                 case 1:
-                    session = (_a = (_h.sent()).get("session")) === null || _a === void 0 ? void 0 : _a.value;
+                    session = (_b = (_a = (_p.sent()).get("session")) === null || _a === void 0 ? void 0 : _a.value) !== null && _b !== void 0 ? _b : null;
                     userId = null;
                     newSessionJwt = null;
                     if (!session) return [3 /*break*/, 5];
-                    _h.label = 2;
+                    _p.label = 2;
                 case 2:
-                    _h.trys.push([2, 4, , 5]);
+                    _p.trys.push([2, 4, , 5]);
                     return [4 /*yield*/, jwt_1.verifyAccessToken(session)];
                 case 3:
-                    payload = (_h.sent()).payload;
-                    userId = (_b = payload === null || payload === void 0 ? void 0 : payload.sub) !== null && _b !== void 0 ? _b : null;
+                    payload = (_p.sent()).payload;
+                    userId = (payload === null || payload === void 0 ? void 0 : payload.sub) ? String(payload.sub) : null;
                     return [3 /*break*/, 5];
                 case 4:
-                    _e = _h.sent();
+                    _m = _p.sent();
                     return [3 /*break*/, 5];
                 case 5:
                     if (!!userId) return [3 /*break*/, 13];
                     return [4 /*yield*/, jar];
                 case 6:
-                    refresh = (_c = (_h.sent()).get("refresh")) === null || _c === void 0 ? void 0 : _c.value;
+                    refresh = (_d = (_c = (_p.sent()).get("refresh")) === null || _c === void 0 ? void 0 : _c.value) !== null && _d !== void 0 ? _d : null;
                     if (!refresh) return [3 /*break*/, 13];
-                    _h.label = 7;
+                    _p.label = 7;
                 case 7:
-                    _h.trys.push([7, 12, , 13]);
+                    _p.trys.push([7, 12, , 13]);
                     return [4 /*yield*/, jwt_1.verifyRefreshToken(refresh)];
                 case 8:
-                    _f = _h.sent(), payload = _f.payload, jti = _f.jti;
-                    uid = String((_d = payload === null || payload === void 0 ? void 0 : payload.sub) !== null && _d !== void 0 ? _d : "");
+                    payload = (_p.sent()).payload;
+                    uid = String((_e = payload === null || payload === void 0 ? void 0 : payload.sub) !== null && _e !== void 0 ? _e : "");
+                    jti = String((_g = (_f = payload) === null || _f === void 0 ? void 0 : _f.jti) !== null && _g !== void 0 ? _g : "");
+                    if (!(uid && jti)) return [3 /*break*/, 11];
                     return [4 /*yield*/, db_1.db.query.refreshTokensTable.findFirst({
                             where: drizzle_orm_1.and(drizzle_orm_1.eq(schema_1.refreshTokensTable.userId, uid), drizzle_orm_1.eq(schema_1.refreshTokensTable.jtiHash, crypto_1.sha256(jti)), drizzle_orm_1.eq(schema_1.refreshTokensTable.revoked, false), drizzle_orm_1.gt(schema_1.refreshTokensTable.expiresAt, new Date()))
                         })];
                 case 9:
-                    rec = _h.sent();
+                    rec = _p.sent();
                     if (!rec) return [3 /*break*/, 11];
                     userId = uid;
                     return [4 /*yield*/, jwt_1.signAccessToken(uid, {
-                            role: payload.role,
-                            email: payload.email,
-                            name: payload.name,
-                            imageUrl: payload.imageUrl
+                            role: (_h = payload) === null || _h === void 0 ? void 0 : _h.role,
+                            email: (_j = payload) === null || _j === void 0 ? void 0 : _j.email,
+                            name: (_k = payload) === null || _k === void 0 ? void 0 : _k.name,
+                            imageUrl: (_l = payload) === null || _l === void 0 ? void 0 : _l.imageUrl
                         })];
                 case 10:
-                    // re-issue a short-lived session
-                    newSessionJwt = _h.sent();
-                    _h.label = 11;
+                    // re-issue short-lived session (carry some claims if you want)
+                    newSessionJwt = _p.sent();
+                    _p.label = 11;
                 case 11: return [3 /*break*/, 13];
                 case 12:
-                    _g = _h.sent();
+                    _o = _p.sent();
                     return [3 /*break*/, 13];
                 case 13:
                     if (!userId) {
@@ -116,7 +118,7 @@ function GET() {
                             columns: { id: true, name: true, email: true, role: true, imageUrl: true }
                         })];
                 case 14:
-                    user = _h.sent();
+                    user = _p.sent();
                     if (!user) {
                         return [2 /*return*/, server_1.NextResponse.json({ user: null }, { status: 401, headers: { "Cache-Control": "no-store" } })];
                     }

@@ -9,9 +9,7 @@ import { Menu, LogOut, User as UserIcon } from "lucide-react";
 import { http } from "@/lib/http";
 
 import { Button } from "@/components/ui/button";
-import {
-  Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetClose,
-} from "@/components/ui/sheet";
+import { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/ModeToggle";
 
@@ -25,45 +23,31 @@ const menuItems = [
 ];
 
 const fetchMe = async (): Promise<Me | null> => {
-  try {
-    const r = await http.get("/api/auth/me");
-    return r.data?.user ?? null;
-  } catch {
-    return null;
-  }
+  try { const r = await http.get("/api/auth/me"); return r.data?.user ?? null; }
+  catch { return null; }
 };
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-
-  // SWR keeps this fresh automatically and on focus
-  const { data: me, isLoading, mutate } = useSWR("me", fetchMe, {
-    revalidateOnFocus: true,
-    revalidateOnReconnect: true,
-    shouldRetryOnError: false,
-  });
-
+  const { data: me, isLoading, mutate } = useSWR("me", fetchMe, { revalidateOnFocus: true, revalidateOnReconnect: true, shouldRetryOnError: false });
   const isActive = (p: string) => pathname === p;
 
-  // Sheet UX
   useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mql = window.matchMedia("(min-width: 768px)");
     const handler = (e: MediaQueryListEvent) => { if (e.matches) setOpen(false); };
     mql.addEventListener?.("change", handler);
-    
     mql.addListener?.(handler);
     return () => {
       mql.removeEventListener?.("change", handler);
-    
       mql.removeListener?.(handler);
     };
   }, []);
 
-  // Revalidate when someone fires the custom event
+  // 🔁 revalidate when anyone fires the event
   useEffect(() => {
     const onAuthChanged = () => mutate();
     window.addEventListener("auth:changed", onAuthChanged);
@@ -71,25 +55,22 @@ export default function Navbar() {
   }, [mutate]);
 
   async function onLogout() {
-    try {
-      await http.post("/api/auth/logout");
-    } finally {
-      await mutate(null, { revalidate: false }); // flip UI instantly
+    try { await http.post("/api/auth/logout"); }
+    finally {
+      await mutate(null, { revalidate: false });
       router.push("/");
-      window.dispatchEvent(new Event("auth:changed")); // keep other tabs/components in sync
+      window.dispatchEvent(new Event("auth:changed"));
     }
   }
 
   return (
     <div className="sticky top-0 z-50 rounded-full border-b border-border bg-background/70 backdrop-blur supports-backdrop-filter:bg-background/60">
       <header className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 text-foreground">
-        {/* Brand */}
         <Link href="/" className="flex items-center gap-2" aria-label="Resumint Home">
           <Image className="block dark:hidden" src="/Images/Logo/logo.svg" alt="Resumint" width={180} height={180} priority />
           <Image className="hidden dark:block" src="/Images/Logo/logo-dark.svg" alt="Resumint" width={180} height={180} priority />
         </Link>
 
-        {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-1">
           {menuItems.map((item) => (
             <Button key={item.path} asChild variant="ghost" size="sm" className={`px-3 ${isActive(item.path) ? "bg-muted font-medium" : ""}`}>
@@ -98,7 +79,6 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Desktop Right */}
         <div className="hidden md:flex items-center gap-2">
           <ModeToggle />
           {isLoading ? (
@@ -110,7 +90,7 @@ export default function Navbar() {
                   {me.imageUrl
                     ? <img src={me.imageUrl} alt={me.name ?? me.email} className="h-5 w-5 rounded-full" />
                     : <UserIcon className="h-4 w-4" />}
-                  <span className="ml-2 hidden sm:inline max-w-[10rem] truncate">{me.name ?? me.email}</span>
+                  <span className="ml-2 hidden sm:inline max-w-40 truncate">{me.name ?? me.email}</span>
                 </Link>
               </Button>
               <Button size="sm" variant="outline" onClick={onLogout}>
@@ -129,7 +109,6 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile */}
         <div className="md:hidden">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild><Button variant="ghost" size="icon" aria-label="Open menu"><Menu className="h-5 w-5" /></Button></SheetTrigger>
