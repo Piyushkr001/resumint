@@ -18,7 +18,7 @@ type Me = { id: string; name: string | null; email: string; imageUrl?: string | 
 const menuItems = [
   { title: "Home", path: "/" },
   { title: "Dashboard", path: "/dashboard" },
-  { title: "Templates", path: "/templates" },
+  { title: "Create Resume", path: "/resumes/new" },
   { title: "About", path: "/about" },
   { title: "Contact", path: "/contact" },
 ];
@@ -147,9 +147,8 @@ export default function Navbar() {
             <SheetContent side="right" className="w-80 bg-background/95 text-foreground backdrop-blur supports-backdrop-filter:bg-background/85">
               <SheetHeader>
                 <SheetTitle className="flex items-center gap-2">
-                  <Image className="block dark:hidden" src="/Images/Logo/logo.svg" alt="Resumint" width={28} height={28} />
-                  <Image className="hidden dark:block" src="/Images/Logo/logo-dark.svg" alt="Resumint" width={28} height={28} />
-                  <span>Resumint</span>
+                  <Image className="block dark:hidden" src="/Images/Logo/logo.svg" alt="Resumint" width={120} height={120} />
+                  <Image className="hidden dark:block" src="/Images/Logo/logo-dark.svg" alt="Resumint" width={120} height={120} />
                 </SheetTitle>
               </SheetHeader>
 

@@ -1,20 +1,33 @@
+// app/dashboard/page.tsx
 "use client";
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
-// Toast-on-redirect helper
+// Toast-on-redirect helper (keep your existing component)
 import AlreadyToast from "./AlreadyToast";
 
 // shadcn/ui
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table, TableHeader, TableHead, TableRow, TableBody, TableCell,
+  Table,
+  TableHeader,
+  TableHead,
+  TableRow,
+  TableBody,
+  TableCell,
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
@@ -23,7 +36,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 // icons
 import {
-  Plus, FileText, Download, ArrowUpRight, ArrowDownRight, Search, RefreshCcw,
+  Plus,
+  FileText,
+  Download,
+  ArrowUpRight,
+  ArrowDownRight,
+  Search,
+  RefreshCcw,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -31,7 +50,13 @@ import {
 /* ------------------------------------------------------------------ */
 
 type KPI = { label: string; value: number; delta: string; up: boolean };
-type ResumeRow = { id: string; title: string; template: string; ats: number; updatedAt: string };
+type ResumeRow = {
+  id: string;
+  title: string;
+  template: string;
+  ats: number;
+  updatedAt: string;
+};
 type Insight = { name: string; progress: number };
 
 type DashboardData = {
@@ -41,10 +66,27 @@ type DashboardData = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Data hook (empty state until backend exists)                        */
+/* Helpers                                                             */
 /* ------------------------------------------------------------------ */
 
-function useDashboardData() {
+async function readError(res: Response) {
+  try {
+    const j = await res.json();
+    return j?.error || j?.message || res.statusText;
+  } catch {
+    try {
+      return await res.text();
+    } catch {
+      return "Something went wrong";
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Data hook → calls /api/dashboard (fixed: no refresh loop)           */
+/* ------------------------------------------------------------------ */
+
+function useDashboardData(onUnauthorized?: () => void) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [data, setData] = React.useState<DashboardData>({
@@ -53,26 +95,62 @@ function useDashboardData() {
     insights: [],
   });
 
+  // Keep latest unauthorized callback in a ref so `load` can be stable
+  const unauthorizedRef = React.useRef(onUnauthorized);
+  React.useEffect(() => {
+    unauthorizedRef.current = onUnauthorized;
+  }, [onUnauthorized]);
+
   const load = React.useCallback(async () => {
     setLoading(true);
     setError(null);
-    try {
-      // TODO: plug in backend when ready:
-      // const res = await fetch("/api/dashboard", { cache: "no-store" });
-      // if (!res.ok) throw new Error(await res.text());
-      // const json = (await res.json()) as DashboardData;
-      // setData(json);
 
-      // For now, empty state:
-      setData({ kpis: [], resumes: [], insights: [] });
+    const ctrl = new AbortController();
+    try {
+      const res = await fetch("/api/dashboard", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+        signal: ctrl.signal,
+      });
+
+      if (res.status === 401) {
+        unauthorizedRef.current?.();
+        return;
+      }
+      if (!res.ok) {
+        const msg = await readError(res);
+        throw new Error(msg);
+      }
+
+      const j = (await res.json()) as Partial<DashboardData> | undefined;
+
+      setData({
+        kpis: Array.isArray(j?.kpis) ? j!.kpis : [],
+        resumes: Array.isArray(j?.resumes) ? j!.resumes : [],
+        insights: Array.isArray(j?.insights) ? j!.insights : [],
+      });
     } catch (e: any) {
-      setError(e?.message ?? "Failed to load dashboard");
+      if (e?.name !== "AbortError") {
+        setError(e?.message ?? "Failed to load dashboard");
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
 
-  React.useEffect(() => { load(); }, [load]);
+    return () => ctrl.abort();
+  }, []); // <- stays stable
+
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!cancelled) await load();
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [load]);
 
   return { loading, error, data, reload: load };
 }
@@ -87,21 +165,32 @@ function HeaderBar(props: { onReload: () => void; loading: boolean }) {
     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Overview of your resumes, ATS score and activity.</p>
+        <p className="text-sm text-muted-foreground">
+          Overview of your resumes, ATS score and activity.
+        </p>
       </div>
       <div className="flex w-full gap-2 md:w-auto">
         <div className="relative w-full md:w-80">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input placeholder="Search resumes…" className="pl-9" />
         </div>
+        {/* NOTE: keep path consistent with where your new page lives.
+           If it's at /dashboard/resumes/new, change the href below. */}
         <Button asChild className="whitespace-nowrap">
           <Link href="/resumes/new">
             <Plus className="mr-2 h-4 w-4" />
             New Resume
           </Link>
         </Button>
-        <Button variant="outline" onClick={onReload} disabled={loading} className="whitespace-nowrap">
-          <RefreshCcw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+        <Button
+          variant="outline"
+          onClick={onReload}
+          disabled={loading}
+          className="whitespace-nowrap"
+        >
+          <RefreshCcw
+            className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`}
+          />
           Refresh
         </Button>
       </div>
@@ -125,10 +214,10 @@ function KpiSkeleton() {
 
 function KpiCards({ items }: { items: KPI[] }) {
   if (!items.length) {
-    // Show a simple empty state banner instead of cards
     return (
       <div className="mt-6 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-        KPI metrics will appear here once you start creating resumes and the backend is connected.
+        KPI metrics will appear here once you start creating resumes and the
+        backend is connected.
       </div>
     );
   }
@@ -144,9 +233,15 @@ function KpiCards({ items }: { items: KPI[] }) {
           <CardFooter className="pt-0">
             <Badge
               variant={k.up ? "default" : "secondary"}
-              className={`gap-1 ${k.up ? "bg-emerald-600 hover:bg-emerald-600" : ""}`}
+              className={`gap-1 ${
+                k.up ? "bg-emerald-600 hover:bg-emerald-600" : ""
+              }`}
             >
-              {k.up ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+              {k.up ? (
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDownRight className="h-3.5 w-3.5" />
+              )}
               {k.delta}
             </Badge>
           </CardFooter>
@@ -165,7 +260,10 @@ function RecentResumesSkeleton() {
       </CardHeader>
       <CardContent className="space-y-3 pt-0">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="flex items-center justify-between rounded-md border p-3">
+          <div
+            key={i}
+            className="flex items-center justify-between rounded-md border p-3"
+          >
             <div className="flex items-center gap-3">
               <Skeleton className="h-7 w-7 rounded-full" />
               <div className="space-y-2">
@@ -237,24 +335,42 @@ function RecentResumes({ rows }: { rows: ResumeRow[] }) {
                       </Avatar>
                       <div className="flex flex-col">
                         <span className="truncate">{r.title}</span>
-                        <span className="text-xs text-muted-foreground md:hidden">{r.template}</span>
+                        <span className="text-xs text-muted-foreground md:hidden">
+                          {r.template}
+                        </span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{r.template}</TableCell>
-                  <TableCell>
-                    <Badge variant={r.ats >= 85 ? "default" : "secondary"}>{r.ats}</Badge>
+                  <TableCell className="hidden md:table-cell">
+                    {r.template}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{r.updatedAt}</TableCell>
+                  <TableCell>
+                    <Badge variant={r.ats >= 85 ? "default" : "secondary"}>
+                      {r.ats}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {r.updatedAt}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button asChild size="sm" variant="outline" className="h-8 px-3">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-3"
+                      >
                         <Link href={`/resumes/${r.id}`}>
                           <FileText className="mr-1.5 h-4 w-4" />
                           Open
                         </Link>
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 px-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 px-2"
+                        aria-label="Download"
+                      >
                         <Download className="h-4 w-4" />
                       </Button>
                     </div>
@@ -302,13 +418,17 @@ function Insights({ items }: { items: Insight[] }) {
       </CardHeader>
       <CardContent className="space-y-4">
         {items.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No insights yet. Create a resume to see suggestions here.</p>
+          <p className="text-sm text-muted-foreground">
+            No insights yet. Create a resume to see suggestions here.
+          </p>
         ) : (
           items.map((it) => (
             <div key={it.name} className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-sm">{it.name}</span>
-                <span className="text-xs text-muted-foreground">{it.progress}%</span>
+                <span className="text-xs text-muted-foreground">
+                  {it.progress}%
+                </span>
               </div>
               <Progress value={it.progress} />
             </div>
@@ -327,14 +447,12 @@ function QuickActions() {
         <CardDescription>Jump back into work</CardDescription>
       </CardHeader>
       <CardContent className="grid gap-2">
+        {/* Adjust href to /dashboard/resumes/new if that's your route */}
         <Button asChild>
           <Link href="/resumes/new">
             <Plus className="mr-2 h-4 w-4" />
             Create New Resume
           </Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/templates">Browse Templates</Link>
         </Button>
         <Button asChild variant="ghost">
           <Link href="/uploads">Import from PDF</Link>
@@ -356,7 +474,15 @@ function QuickActions() {
 /* ------------------------------------------------------------------ */
 
 export default function DashboardPage() {
-  const { loading, error, data, reload } = useDashboardData();
+  const router = useRouter();
+
+  // Stable unauthorized handler prevents the hook from re-running endlessly
+  const handleUnauthorized = React.useCallback(() => {
+    toast.error("Please log in to view your dashboard.");
+    router.replace("/login?next=/dashboard");
+  }, [router]);
+
+  const { loading, error, data, reload } = useDashboardData(handleUnauthorized);
 
   return (
     <>
@@ -374,7 +500,9 @@ export default function DashboardPage() {
         {/* KPI row */}
         {loading ? (
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => <KpiSkeleton key={i} />)}
+            {[...Array(4)].map((_, i) => (
+              <KpiSkeleton key={i} />
+            ))}
           </div>
         ) : (
           <KpiCards items={data.kpis} />

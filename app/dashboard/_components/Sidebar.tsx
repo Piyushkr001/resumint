@@ -4,23 +4,38 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutGrid, FileText, Sparkles, BarChart3, Settings, HelpCircle, Menu,
-  ChevronLeft, ChevronRight, LogOut, User as UserIcon
+  LayoutGrid,
+  FileText,
+  Sparkles,
+  BarChart3,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  LogOut,
+  User as UserIcon,
+  PanelLeftOpen,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
-  Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { ModeToggle } from "@/components/ModeToggle";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"; // ✅ add this
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 type NavItem = {
   label: string;
@@ -37,9 +52,13 @@ const NAV: NavItem[] = [
 ];
 
 type SidebarProps = {
+  /** Default collapsed on desktop (persists via localStorage) */
   collapsedDefault?: boolean;
+  /** Optional user (to show avatar/pill + logout) */
   user?: { name?: string | null; email?: string; imageUrl?: string | null };
+  /** Optional logout handler */
   onLogout?: () => void | Promise<void>;
+  /** Optional brand (unused here but available) */
   brand?: React.ReactNode;
 };
 
@@ -72,22 +91,26 @@ function SidebarContent({
 }: Pick<SidebarProps, "user" | "onLogout"> & { collapsed: boolean }) {
   const pathname = usePathname();
 
+  // ✅ Fix: Overview is exact; others match exact OR nested
+  const isActiveLink = React.useCallback(
+    (href: string) => {
+      if (!pathname) return false;
+      if (href === "/dashboard") return pathname === "/dashboard"; // exact only
+      return pathname === href || pathname.startsWith(href + "/");
+    },
+    [pathname]
+  );
+
   return (
     <TooltipProvider delayDuration={0}>
       <div className="flex h-full w-full flex-col">
         {/* Top: Brand */}
-        <div className={cn(
-          "flex items-center gap-2 px-3 py-3",
-          collapsed ? "justify-center" : "justify-start"
-        )}>
-          <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center">
-            <Sparkles className="h-4 w-4 text-primary" />
-          </div>
-          {!collapsed && (
-            <div className="font-semibold tracking-tight">
-              Resumint
-            </div>
+        <div
+          className={cn(
+            "flex items-center gap-2 px-3 py-3",
+            collapsed ? "justify-center" : "justify-start"
           )}
+        >
         </div>
 
         <Separator />
@@ -97,7 +120,8 @@ function SidebarContent({
           <nav className="px-2 py-2" aria-label="Dashboard">
             {NAV.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || pathname?.startsWith(item.href + "/");
+              const active = isActiveLink(item.href);
+
               const inner = (
                 <Button
                   asChild
@@ -107,9 +131,14 @@ function SidebarContent({
                     collapsed ? "px-0 w-10 h-10 mx-auto" : "px-3"
                   )}
                 >
-                  <Link href={item.href} aria-current={active ? "page" : undefined}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                  >
                     <Icon className={cn("h-4 w-4", collapsed && "mx-auto")} />
-                    {!collapsed && <span className="truncate">{item.label}</span>}
+                    {!collapsed && (
+                      <span className="truncate">{item.label}</span>
+                    )}
                   </Link>
                 </Button>
               );
@@ -134,15 +163,25 @@ function SidebarContent({
 
         {/* Bottom: User + Theme + Logout */}
         <div className="p-2">
-          <div className={cn(
-            "flex items-center gap-2 rounded-lg px-2 py-2",
-            collapsed ? "justify-center" : "justify-between"
-          )}>
+          <div
+            className={cn(
+              "flex items-center gap-2 rounded-lg px-2 py-2",
+              collapsed ? "justify-center" : "justify-between"
+            )}
+          >
             {user ? (
               <>
-                <div className={cn("flex items-center gap-2", collapsed && "justify-center")}>
+                <div
+                  className={cn(
+                    "flex items-center gap-2",
+                    collapsed && "justify-center"
+                  )}
+                >
                   <Avatar className="h-7 w-7">
-                    <AvatarImage src={user.imageUrl ?? undefined} alt={user.name ?? user.email ?? "User"} />
+                    <AvatarImage
+                      src={user.imageUrl ?? undefined}
+                      alt={user.name ?? user.email ?? "User"}
+                    />
                     <AvatarFallback>
                       <UserIcon className="h-4 w-4" />
                     </AvatarFallback>
@@ -171,7 +210,10 @@ function SidebarContent({
             <Button
               onClick={onLogout}
               variant="outline"
-              className={cn("mt-2 w-full", collapsed && "justify-center px-0 w-10 h-9 mx-auto")}
+              className={cn(
+                "mt-2 w-full",
+                collapsed && "justify-center px-0 w-10 h-9 mx-auto"
+              )}
             >
               <LogOut className="h-4 w-4" />
               {!collapsed && <span className="ml-2">Logout</span>}
@@ -207,7 +249,11 @@ export function DashboardSidebar({
           className="absolute -right-3 top-3 z-10 h-6 w-6 rounded-full border bg-background shadow"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+          {collapsed ? (
+            <ChevronRight className="h-3.5 w-3.5" />
+          ) : (
+            <ChevronLeft className="h-3.5 w-3.5" />
+          )}
         </Button>
 
         <SidebarContent collapsed={collapsed} user={user} onLogout={onLogout} />
@@ -223,12 +269,17 @@ export function DashboardMobileSidebar({
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Open menu" className="md:hidden">
-          <Menu className="h-5 w-5" />
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Open menu"
+          className="md:hidden"
+        >
+          <PanelLeftOpen className="h-5 w-5" />
         </Button>
       </SheetTrigger>
 
-      {/* ✅ Provide an accessible title for the dialog */}
+      {/* Accessible title for mobile dialog */}
       <SheetContent side="left" className="p-0 w-80">
         <SheetHeader>
           <VisuallyHidden>

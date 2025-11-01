@@ -1,3 +1,4 @@
+// app/dashboard/page.tsx
 "use client";
 "use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
@@ -46,7 +47,9 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 exports.__esModule = true;
 var react_1 = require("react");
 var link_1 = require("next/link");
-// Toast-on-redirect helper
+var navigation_1 = require("next/navigation");
+var react_hot_toast_1 = require("react-hot-toast");
+// Toast-on-redirect helper (keep your existing component)
 var AlreadyToast_1 = require("./AlreadyToast");
 // shadcn/ui
 var button_1 = require("@/components/ui/button");
@@ -61,9 +64,39 @@ var skeleton_1 = require("@/components/ui/skeleton");
 // icons
 var lucide_react_1 = require("lucide-react");
 /* ------------------------------------------------------------------ */
-/* Data hook (empty state until backend exists)                        */
+/* Helpers                                                             */
 /* ------------------------------------------------------------------ */
-function useDashboardData() {
+function readError(res) {
+    return __awaiter(this, void 0, void 0, function () {
+        var j, _a, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    _c.trys.push([0, 2, , 7]);
+                    return [4 /*yield*/, res.json()];
+                case 1:
+                    j = _c.sent();
+                    return [2 /*return*/, (j === null || j === void 0 ? void 0 : j.error) || (j === null || j === void 0 ? void 0 : j.message) || res.statusText];
+                case 2:
+                    _a = _c.sent();
+                    _c.label = 3;
+                case 3:
+                    _c.trys.push([3, 5, , 6]);
+                    return [4 /*yield*/, res.text()];
+                case 4: return [2 /*return*/, _c.sent()];
+                case 5:
+                    _b = _c.sent();
+                    return [2 /*return*/, "Something went wrong"];
+                case 6: return [3 /*break*/, 7];
+                case 7: return [2 /*return*/];
+            }
+        });
+    });
+}
+/* ------------------------------------------------------------------ */
+/* Data hook → calls /api/dashboard (fixed: no refresh loop)           */
+/* ------------------------------------------------------------------ */
+function useDashboardData(onUnauthorized) {
     var _this = this;
     var _a = react_1["default"].useState(false), loading = _a[0], setLoading = _a[1];
     var _b = react_1["default"].useState(null), error = _b[0], setError = _b[1];
@@ -72,30 +105,82 @@ function useDashboardData() {
         resumes: [],
         insights: []
     }), data = _c[0], setData = _c[1];
+    // Keep latest unauthorized callback in a ref so `load` can be stable
+    var unauthorizedRef = react_1["default"].useRef(onUnauthorized);
+    react_1["default"].useEffect(function () {
+        unauthorizedRef.current = onUnauthorized;
+    }, [onUnauthorized]);
     var load = react_1["default"].useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
-        var _a;
-        return __generator(this, function (_b) {
-            setLoading(true);
-            setError(null);
-            try {
-                // TODO: plug in backend when ready:
-                // const res = await fetch("/api/dashboard", { cache: "no-store" });
-                // if (!res.ok) throw new Error(await res.text());
-                // const json = (await res.json()) as DashboardData;
-                // setData(json);
-                // For now, empty state:
-                setData({ kpis: [], resumes: [], insights: [] });
+        var ctrl, res, msg, j, e_1;
+        var _a, _b;
+        return __generator(this, function (_c) {
+            switch (_c.label) {
+                case 0:
+                    setLoading(true);
+                    setError(null);
+                    ctrl = new AbortController();
+                    _c.label = 1;
+                case 1:
+                    _c.trys.push([1, 6, 7, 8]);
+                    return [4 /*yield*/, fetch("/api/dashboard", {
+                            method: "GET",
+                            credentials: "include",
+                            cache: "no-store",
+                            headers: { Accept: "application/json" },
+                            signal: ctrl.signal
+                        })];
+                case 2:
+                    res = _c.sent();
+                    if (res.status === 401) {
+                        (_a = unauthorizedRef.current) === null || _a === void 0 ? void 0 : _a.call(unauthorizedRef);
+                        return [2 /*return*/];
+                    }
+                    if (!!res.ok) return [3 /*break*/, 4];
+                    return [4 /*yield*/, readError(res)];
+                case 3:
+                    msg = _c.sent();
+                    throw new Error(msg);
+                case 4: return [4 /*yield*/, res.json()];
+                case 5:
+                    j = (_c.sent());
+                    setData({
+                        kpis: Array.isArray(j === null || j === void 0 ? void 0 : j.kpis) ? j.kpis : [],
+                        resumes: Array.isArray(j === null || j === void 0 ? void 0 : j.resumes) ? j.resumes : [],
+                        insights: Array.isArray(j === null || j === void 0 ? void 0 : j.insights) ? j.insights : []
+                    });
+                    return [3 /*break*/, 8];
+                case 6:
+                    e_1 = _c.sent();
+                    if ((e_1 === null || e_1 === void 0 ? void 0 : e_1.name) !== "AbortError") {
+                        setError((_b = e_1 === null || e_1 === void 0 ? void 0 : e_1.message) !== null && _b !== void 0 ? _b : "Failed to load dashboard");
+                    }
+                    return [3 /*break*/, 8];
+                case 7:
+                    setLoading(false);
+                    return [7 /*endfinally*/];
+                case 8: return [2 /*return*/, function () { return ctrl.abort(); }];
             }
-            catch (e) {
-                setError((_a = e === null || e === void 0 ? void 0 : e.message) !== null && _a !== void 0 ? _a : "Failed to load dashboard");
-            }
-            finally {
-                setLoading(false);
-            }
-            return [2 /*return*/];
         });
-    }); }, []);
-    react_1["default"].useEffect(function () { load(); }, [load]);
+    }); }, []); // <- stays stable
+    react_1["default"].useEffect(function () {
+        var cancelled = false;
+        (function () { return __awaiter(_this, void 0, void 0, function () {
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        if (!!cancelled) return [3 /*break*/, 2];
+                        return [4 /*yield*/, load()];
+                    case 1:
+                        _a.sent();
+                        _a.label = 2;
+                    case 2: return [2 /*return*/];
+                }
+            });
+        }); })();
+        return function () {
+            cancelled = true;
+        };
+    }, [load]);
     return { loading: loading, error: error, data: data, reload: load };
 }
 /* ------------------------------------------------------------------ */
@@ -130,7 +215,6 @@ function KpiSkeleton() {
 function KpiCards(_a) {
     var items = _a.items;
     if (!items.length) {
-        // Show a simple empty state banner instead of cards
         return (react_1["default"].createElement("div", { className: "mt-6 rounded-md border border-dashed p-4 text-sm text-muted-foreground" }, "KPI metrics will appear here once you start creating resumes and the backend is connected."));
     }
     return (react_1["default"].createElement("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" }, items.map(function (k) { return (react_1["default"].createElement(card_1.Card, { key: k.label, className: "border-border/60" },
@@ -139,7 +223,7 @@ function KpiCards(_a) {
             react_1["default"].createElement(card_1.CardTitle, { className: "text-3xl font-bold" }, k.value)),
         react_1["default"].createElement(card_1.CardFooter, { className: "pt-0" },
             react_1["default"].createElement(badge_1.Badge, { variant: k.up ? "default" : "secondary", className: "gap-1 " + (k.up ? "bg-emerald-600 hover:bg-emerald-600" : "") },
-                k.up ? react_1["default"].createElement(lucide_react_1.ArrowUpRight, { className: "h-3.5 w-3.5" }) : react_1["default"].createElement(lucide_react_1.ArrowDownRight, { className: "h-3.5 w-3.5" }),
+                k.up ? (react_1["default"].createElement(lucide_react_1.ArrowUpRight, { className: "h-3.5 w-3.5" })) : (react_1["default"].createElement(lucide_react_1.ArrowDownRight, { className: "h-3.5 w-3.5" })),
                 k.delta)))); })));
 }
 function RecentResumesSkeleton() {
@@ -204,7 +288,7 @@ function RecentResumes(_a) {
                                     react_1["default"].createElement(link_1["default"], { href: "/resumes/" + r.id },
                                         react_1["default"].createElement(lucide_react_1.FileText, { className: "mr-1.5 h-4 w-4" }),
                                         "Open")),
-                                react_1["default"].createElement(button_1.Button, { size: "sm", variant: "ghost", className: "h-8 px-2" },
+                                react_1["default"].createElement(button_1.Button, { size: "sm", variant: "ghost", className: "h-8 px-2", "aria-label": "Download" },
                                     react_1["default"].createElement(lucide_react_1.Download, { className: "h-4 w-4" })))))); }))))),
         react_1["default"].createElement(card_1.CardFooter, { className: "justify-end" },
             react_1["default"].createElement(button_1.Button, { asChild: true, variant: "ghost", size: "sm" },
@@ -243,8 +327,6 @@ function QuickActions() {
                 react_1["default"].createElement(link_1["default"], { href: "/resumes/new" },
                     react_1["default"].createElement(lucide_react_1.Plus, { className: "mr-2 h-4 w-4" }),
                     "Create New Resume")),
-            react_1["default"].createElement(button_1.Button, { asChild: true, variant: "outline" },
-                react_1["default"].createElement(link_1["default"], { href: "/templates" }, "Browse Templates")),
             react_1["default"].createElement(button_1.Button, { asChild: true, variant: "ghost" },
                 react_1["default"].createElement(link_1["default"], { href: "/uploads" }, "Import from PDF"))),
         react_1["default"].createElement(separator_1.Separator, null),
@@ -256,7 +338,13 @@ function QuickActions() {
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 function DashboardPage() {
-    var _a = useDashboardData(), loading = _a.loading, error = _a.error, data = _a.data, reload = _a.reload;
+    var router = navigation_1.useRouter();
+    // Stable unauthorized handler prevents the hook from re-running endlessly
+    var handleUnauthorized = react_1["default"].useCallback(function () {
+        react_hot_toast_1["default"].error("Please log in to view your dashboard.");
+        router.replace("/login?next=/dashboard");
+    }, [router]);
+    var _a = useDashboardData(handleUnauthorized), loading = _a.loading, error = _a.error, data = _a.data, reload = _a.reload;
     return (react_1["default"].createElement(react_1["default"].Fragment, null,
         react_1["default"].createElement(AlreadyToast_1["default"], null),
         react_1["default"].createElement("div", { className: "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6" },
@@ -265,7 +353,7 @@ function DashboardPage() {
                 react_1["default"].createElement("b", null, "Error:"),
                 " ",
                 error)),
-            loading ? (react_1["default"].createElement("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" }, __spreadArrays(Array(4)).map(function (_, i) { return react_1["default"].createElement(KpiSkeleton, { key: i }); }))) : (react_1["default"].createElement(KpiCards, { items: data.kpis })),
+            loading ? (react_1["default"].createElement("div", { className: "mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" }, __spreadArrays(Array(4)).map(function (_, i) { return (react_1["default"].createElement(KpiSkeleton, { key: i })); }))) : (react_1["default"].createElement(KpiCards, { items: data.kpis })),
             react_1["default"].createElement("div", { className: "mt-6 grid gap-4 lg:grid-cols-3" }, loading ? (react_1["default"].createElement(react_1["default"].Fragment, null,
                 react_1["default"].createElement(RecentResumesSkeleton, null),
                 react_1["default"].createElement("div", { className: "grid gap-4" },

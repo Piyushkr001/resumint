@@ -51,7 +51,7 @@ var ModeToggle_1 = require("@/components/ModeToggle");
 var menuItems = [
     { title: "Home", path: "/" },
     { title: "Dashboard", path: "/dashboard" },
-    { title: "Templates", path: "/templates" },
+    { title: "Create Resume", path: "/resumes/new" },
     { title: "About", path: "/about" },
     { title: "Contact", path: "/contact" },
 ];
@@ -164,9 +164,8 @@ function Navbar() {
                     React.createElement(sheet_1.SheetContent, { side: "right", className: "w-80 bg-background/95 text-foreground backdrop-blur supports-backdrop-filter:bg-background/85" },
                         React.createElement(sheet_1.SheetHeader, null,
                             React.createElement(sheet_1.SheetTitle, { className: "flex items-center gap-2" },
-                                React.createElement(image_1["default"], { className: "block dark:hidden", src: "/Images/Logo/logo.svg", alt: "Resumint", width: 28, height: 28 }),
-                                React.createElement(image_1["default"], { className: "hidden dark:block", src: "/Images/Logo/logo-dark.svg", alt: "Resumint", width: 28, height: 28 }),
-                                React.createElement("span", null, "Resumint"))),
+                                React.createElement(image_1["default"], { className: "block dark:hidden", src: "/Images/Logo/logo.svg", alt: "Resumint", width: 120, height: 120 }),
+                                React.createElement(image_1["default"], { className: "hidden dark:block", src: "/Images/Logo/logo-dark.svg", alt: "Resumint", width: 120, height: 120 }))),
                         React.createElement(separator_1.Separator, { className: "my-4" }),
                         React.createElement("nav", { className: "grid gap-1" }, menuItems.map(function (item) { return (React.createElement(sheet_1.SheetClose, { asChild: true, key: item.path },
                             React.createElement(button_1.Button, { asChild: true, variant: isActive(item.path) ? "secondary" : "ghost", className: "justify-start" },
