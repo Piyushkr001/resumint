@@ -27,10 +27,17 @@ function json(data: any, status = 200) {
   });
 }
 
+// FIX: more robust cookie lookup + no `await cookies()`
 async function requireUid(): Promise<string | null> {
-  const token = (await cookies()).get("session")?.value;
-  if (!token) return null;
   try {
+    const jar = await cookies();
+    const token =
+      jar.get("token")?.value ??
+      jar.get("session")?.value ??
+      jar.get("__session")?.value ??
+      null;
+    if (!token) return null;
+
     const { payload } = await verifyAccessToken(token);
     const sub = payload?.sub;
     return sub ? String(sub) : null;
@@ -67,7 +74,7 @@ export async function GET(
   _req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const { id: raw } = await ctx.params;
+  const { id: raw } = await ctx.params; // ✅ keep awaiting params
   const id = decodeURIComponent(raw ?? "").trim();
   if (!UUID_RE.test(id)) return json({ error: "Invalid resume id" }, 400);
 
@@ -107,7 +114,7 @@ export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const { id: raw } = await ctx.params;
+  const { id: raw } = await ctx.params; // ✅ keep awaiting params
   const id = decodeURIComponent(raw ?? "").trim();
   if (!UUID_RE.test(id)) return json({ error: "Invalid resume id" }, 400);
 
@@ -156,7 +163,7 @@ export async function DELETE(
   _req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const { id: raw } = await ctx.params;
+  const { id: raw } = await ctx.params; // ✅ keep awaiting params
   const id = decodeURIComponent(raw ?? "").trim();
   if (!UUID_RE.test(id)) return json({ error: "Invalid resume id" }, 400);
 
