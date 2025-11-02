@@ -287,9 +287,7 @@ function RecentResumes(_a) {
                                 react_1["default"].createElement(button_1.Button, { asChild: true, size: "sm", variant: "outline", className: "h-8 px-3" },
                                     react_1["default"].createElement(link_1["default"], { href: "/resumes/" + r.id },
                                         react_1["default"].createElement(lucide_react_1.FileText, { className: "mr-1.5 h-4 w-4" }),
-                                        "Open")),
-                                react_1["default"].createElement(button_1.Button, { size: "sm", variant: "ghost", className: "h-8 px-2", "aria-label": "Download" },
-                                    react_1["default"].createElement(lucide_react_1.Download, { className: "h-4 w-4" })))))); }))))),
+                                        "Open")))))); }))))),
         react_1["default"].createElement(card_1.CardFooter, { className: "justify-end" },
             react_1["default"].createElement(button_1.Button, { asChild: true, variant: "ghost", size: "sm" },
                 react_1["default"].createElement(link_1["default"], { href: "/resumes" }, "View all")))));

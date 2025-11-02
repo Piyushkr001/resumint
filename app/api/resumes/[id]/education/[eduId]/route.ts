@@ -33,6 +33,8 @@ const PatchBody = z.object({
   degree: z.string().min(2).optional(),
   field: z.string().optional(),
   location: z.string().optional(),
+  gradeType: z.string().max(40).optional(),
+  gradeValue: z.string().max(40).optional(),
   startYear: z.union([z.number(), z.string()]).nullable().optional(),
   endYear: z.union([z.number(), z.string()]).nullable().optional(),
   achievements: z.array(z.string()).max(20).optional(),
@@ -71,6 +73,8 @@ export async function PATCH(
   if (v.degree !== undefined) patch.degree = v.degree;
   if (v.field !== undefined) patch.field = v.field || null;
   if (v.location !== undefined) patch.location = v.location || null;
+  if (v.gradeType !== undefined) patch.gradeType = v.gradeType || null;
+  if (v.gradeValue !== undefined) patch.gradeValue = v.gradeValue || null;
   if (v.startYear !== undefined) patch.startYear = toNum(v.startYear);
   if (v.endYear !== undefined) patch.endYear = toNum(v.endYear);
   if (v.achievements !== undefined)

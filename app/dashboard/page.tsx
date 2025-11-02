@@ -365,14 +365,6 @@ function RecentResumes({ rows }: { rows: ResumeRow[] }) {
                           Open
                         </Link>
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 px-2"
-                        aria-label="Download"
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

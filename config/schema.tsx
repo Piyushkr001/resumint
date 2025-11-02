@@ -141,6 +141,8 @@ export const resumeEducationsTable = pgTable(
     degree: varchar("degree", { length: 160 }).notNull(),
     field: varchar("field", { length: 160 }),
     location: varchar("location", { length: 160 }),
+    gradeType: text("grade_type"),   // "percentage" | "cgpa10" | "cgpa4" | "gpa" | "letter"
+    gradeValue: text("grade_value"), 
 
     startYear: smallint("start_year"),
     endYear: smallint("end_year"),

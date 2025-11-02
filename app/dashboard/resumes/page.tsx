@@ -36,7 +36,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationNext, Paginati
 
 // icons
 import {
-  Plus, Search, RefreshCcw, MoreHorizontal, FileText, Download, Pencil, Copy, Trash2, ArrowUpDown,
+  Plus, Search, RefreshCcw, MoreHorizontal, FileText, Download, Pencil, Copy, Trash2, ArrowUpDown, ExternalLink, Share2,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -59,7 +59,7 @@ type ResList = {
 };
 
 /* ------------------------------------------------------------------ */
-/* Data hook - now calling your API                                    */
+/* Data hook - calls your API                                          */
 /* ------------------------------------------------------------------ */
 
 function useResumes() {
@@ -71,8 +71,9 @@ function useResumes() {
   const [search, setSearch] = React.useState<string>("");
   const [template, setTemplate] = React.useState<string>("all");
   const [sort, setSort] = React.useState<string>("updated_desc");
+  const [status, setStatus] = React.useState<string>("any");
   const [page, setPage] = React.useState<number>(1);
-  const perPage = 10;
+  const [perPage, setPerPage] = React.useState<number>(10);
 
   const [data, setData] = React.useState<ResList>({
     items: [],
@@ -96,6 +97,7 @@ function useResumes() {
       const qs = new URLSearchParams();
       if (search.trim()) qs.set("search", search.trim());
       if (template !== "all") qs.set("template", template);
+      if (status !== "any") qs.set("status", status);
       qs.set("sort", sort);
       qs.set("page", String(page));
       qs.set("perPage", String(perPage));
@@ -141,7 +143,7 @@ function useResumes() {
     } finally {
       setLoading(false);
     }
-  }, [router, search, template, sort, page, perPage]);
+  }, [router, search, template, status, sort, page, perPage]);
 
   React.useEffect(() => { load(); }, [load]);
 
@@ -149,8 +151,10 @@ function useResumes() {
     loading, error, data,
     search, setSearch,
     template, setTemplate,
+    status, setStatus,
     sort, setSort,
     page, setPage,
+    perPage, setPerPage,
     reload: load,
   };
 }
@@ -184,7 +188,7 @@ function RowSkeleton() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Row actions (now wired to API)                                      */
+/* Row actions                                                         */
 /* ------------------------------------------------------------------ */
 
 function RowActions({ resume, onChanged }: { resume: Resume; onChanged: () => void }) {
@@ -241,20 +245,35 @@ function RowActions({ resume, onChanged }: { resume: Resume; onChanged: () => vo
     } catch { /* toast handles */ }
   }
 
-  function handleDownload() {
-    // adjust if your API path differs
-    window.open(`/api/resumes/${resume.id}/export?format=pdf`, "_blank", "noopener,noreferrer");
+  const viewPdfUrl = `/api/resumes/${resume.id}/export?format=pdf`;
+  const downloadPdfUrl = `/api/resumes/${resume.id}/export?format=pdf&download=1`;
+  const pageUrl = `/resumes/${resume.id}`;
+
+  function handleViewPdf() {
+    window.open(viewPdfUrl, "_blank", "noopener,noreferrer");
+  }
+  function handleDownloadPdf() {
+    window.open(downloadPdfUrl, "_blank", "noopener,noreferrer");
+  }
+  async function copy(text: string, label: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(`${label} copied`);
+    } catch {
+      toast.error("Copy failed");
+    }
   }
 
   return (
     <>
+      {/* Quick export button */}
       <Button
         size="icon"
         variant="ghost"
         className="h-8 w-8"
-        aria-label="Download"
-        onClick={handleDownload}
-        title="Download PDF"
+        aria-label="Export PDF"
+        onClick={handleViewPdf}
+        title="View PDF"
       >
         <Download className="h-4 w-4" />
       </Button>
@@ -265,14 +284,33 @@ function RowActions({ resume, onChanged }: { resume: Resume; onChanged: () => vo
             <MoreHorizontal className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuSeparator />
+
           <DropdownMenuItem asChild>
-            <Link href={`/resumes/${resume.id}`}>
+            <Link href={pageUrl}>
               <FileText className="mr-2 h-4 w-4" /> Open
             </Link>
           </DropdownMenuItem>
+
+          {/* Export */}
+          <DropdownMenuItem onClick={handleViewPdf}>
+            <ExternalLink className="mr-2 h-4 w-4" /> View PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleDownloadPdf}>
+            <Download className="mr-2 h-4 w-4" /> Download PDF
+          </DropdownMenuItem>
+
+          {/* Copy links */}
+          <DropdownMenuItem onClick={() => copy(location.origin + pageUrl, "Page URL")}>
+            <Share2 className="mr-2 h-4 w-4" /> Copy page URL
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => copy(location.origin + downloadPdfUrl, "Export URL")}>
+            <Copy className="mr-2 h-4 w-4" /> Copy export URL
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleDuplicate}>
             <Copy className="mr-2 h-4 w-4" /> Duplicate
           </DropdownMenuItem>
@@ -333,21 +371,63 @@ function RowActions({ resume, onChanged }: { resume: Resume; onChanged: () => vo
 }
 
 /* ------------------------------------------------------------------ */
+/* Sortable head cell                                                  */
+/* ------------------------------------------------------------------ */
+
+function SortHead({
+  children, activeKey, thisKey, sort, setSort, className = "",
+}: {
+  children: React.ReactNode;
+  activeKey: string;        // current sort key prefix (e.g., "updated", "title", "ats")
+  thisKey: "updated" | "title" | "ats";
+  sort: string;
+  setSort: (v: string) => void;
+  className?: string;
+}) {
+  const isThis = activeKey === thisKey;
+  const dir = isThis && sort.endsWith("_asc") ? "asc" : isThis && sort.endsWith("_desc") ? "desc" : null;
+
+  function toggle() {
+    if (!isThis) {
+      setSort(`${thisKey}_desc`); // default to desc on first click
+      return;
+    }
+    setSort(dir === "desc" ? `${thisKey}_asc` : `${thisKey}_desc`);
+  }
+
+  return (
+    <TableHead onClick={toggle} className={`cursor-pointer select-none ${className}`}>
+      <div className="inline-flex items-center gap-1">
+        {children} <ArrowUpDown className={`h-4 w-4 ${isThis ? "opacity-100" : "opacity-40"}`} />
+      </div>
+    </TableHead>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Table (desktop) + Cards (mobile)                                    */
 /* ------------------------------------------------------------------ */
 
 function ResumesTable({
-  items, onChanged,
-}: { items: Resume[]; onChanged: () => void }) {
+  items, onChanged, sort, setSort,
+}: { items: Resume[]; onChanged: () => void; sort: string; setSort: (v: string) => void }) {
+  const activeKey = sort.split("_")[0] as "updated" | "title" | "ats";
+
   return (
     <div className="rounded-lg border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[50%]">Title</TableHead>
+            <SortHead activeKey={activeKey} thisKey="title" sort={sort} setSort={setSort} className="w-[50%]">
+              Title
+            </SortHead>
             <TableHead>Template</TableHead>
-            <TableHead>ATS</TableHead>
-            <TableHead>Updated</TableHead>
+            <SortHead activeKey={activeKey} thisKey="ats" sort={sort} setSort={setSort}>
+              ATS
+            </SortHead>
+            <SortHead activeKey={activeKey} thisKey="updated" sort={sort} setSort={setSort}>
+              Updated
+            </SortHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -441,8 +521,10 @@ export default function ResumesPage() {
     loading, error, data, reload,
     search, setSearch,
     template, setTemplate,
+    status, setStatus,
     sort, setSort,
     page, setPage,
+    perPage, setPerPage,
   } = useResumes();
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.perPage));
@@ -484,7 +566,7 @@ export default function ResumesPage() {
       <Separator className="my-4" />
 
       {/* Filters */}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <div className="grid gap-1">
           <Label>Template</Label>
           <Select value={template} onValueChange={(v) => { setTemplate(v); setPage(1); }}>
@@ -498,6 +580,7 @@ export default function ResumesPage() {
             </SelectContent>
           </Select>
         </div>
+
         <div className="grid gap-1">
           <Label>Sort</Label>
           <Select value={sort} onValueChange={(v) => { setSort(v); setPage(1); }}>
@@ -517,14 +600,27 @@ export default function ResumesPage() {
             </SelectContent>
           </Select>
         </div>
+
         <div className="grid gap-1">
           <Label>Status</Label>
-          <Select defaultValue="any" onValueChange={() => toast("Status filter not wired to API yet")}>
+          <Select value={status} onValueChange={(v) => { setStatus(v); setPage(1); }}>
             <SelectTrigger><SelectValue placeholder="Any status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="any">Any</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="final">Final</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid gap-1">
+          <Label>Per page</Label>
+          <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
+            <SelectTrigger><SelectValue placeholder="10" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -571,7 +667,7 @@ export default function ResumesPage() {
           <>
             {/* Desktop table */}
             <div className="hidden md:block">
-              <ResumesTable items={data.items} onChanged={reload} />
+              <ResumesTable items={data.items} onChanged={reload} sort={sort} setSort={setSort} />
             </div>
             {/* Mobile cards */}
             <div className="md:hidden">

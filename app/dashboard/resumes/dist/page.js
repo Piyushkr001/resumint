@@ -77,7 +77,7 @@ var pagination_1 = require("@/components/ui/pagination");
 // icons
 var lucide_react_1 = require("lucide-react");
 /* ------------------------------------------------------------------ */
-/* Data hook - now calling your API                                    */
+/* Data hook - calls your API                                          */
 /* ------------------------------------------------------------------ */
 function useResumes() {
     var _this = this;
@@ -87,14 +87,15 @@ function useResumes() {
     var _c = React.useState(""), search = _c[0], setSearch = _c[1];
     var _d = React.useState("all"), template = _d[0], setTemplate = _d[1];
     var _e = React.useState("updated_desc"), sort = _e[0], setSort = _e[1];
-    var _f = React.useState(1), page = _f[0], setPage = _f[1];
-    var perPage = 10;
-    var _g = React.useState({
+    var _f = React.useState("any"), status = _f[0], setStatus = _f[1];
+    var _g = React.useState(1), page = _g[0], setPage = _g[1];
+    var _h = React.useState(10), perPage = _h[0], setPerPage = _h[1];
+    var _j = React.useState({
         items: [],
         total: 0,
         page: page,
         perPage: perPage
-    }), data = _g[0], setData = _g[1];
+    }), data = _j[0], setData = _j[1];
     // optional: abort older fetches
     var abortRef = React.useRef(null);
     var load = React.useCallback(function () { return __awaiter(_this, void 0, void 0, function () {
@@ -116,6 +117,8 @@ function useResumes() {
                         qs.set("search", search.trim());
                     if (template !== "all")
                         qs.set("template", template);
+                    if (status !== "any")
+                        qs.set("status", status);
                     qs.set("sort", sort);
                     qs.set("page", String(page));
                     qs.set("perPage", String(perPage));
@@ -169,14 +172,16 @@ function useResumes() {
                 case 8: return [2 /*return*/];
             }
         });
-    }); }, [router, search, template, sort, page, perPage]);
+    }); }, [router, search, template, status, sort, page, perPage]);
     React.useEffect(function () { load(); }, [load]);
     return {
         loading: loading, error: error, data: data,
         search: search, setSearch: setSearch,
         template: template, setTemplate: setTemplate,
+        status: status, setStatus: setStatus,
         sort: sort, setSort: setSort,
         page: page, setPage: setPage,
+        perPage: perPage, setPerPage: setPerPage,
         reload: load
     };
 }
@@ -200,7 +205,7 @@ function RowSkeleton() {
             React.createElement(skeleton_1.Skeleton, { className: "h-8 w-8" }))));
 }
 /* ------------------------------------------------------------------ */
-/* Row actions (now wired to API)                                      */
+/* Row actions                                                         */
 /* ------------------------------------------------------------------ */
 function RowActions(_a) {
     var resume = _a.resume, onChanged = _a.onChanged;
@@ -295,24 +300,63 @@ function RowActions(_a) {
             });
         });
     }
-    function handleDownload() {
-        // adjust if your API path differs
-        window.open("/api/resumes/" + resume.id + "/export?format=pdf", "_blank", "noopener,noreferrer");
+    var viewPdfUrl = "/api/resumes/" + resume.id + "/export?format=pdf";
+    var downloadPdfUrl = "/api/resumes/" + resume.id + "/export?format=pdf&download=1";
+    var pageUrl = "/resumes/" + resume.id;
+    function handleViewPdf() {
+        window.open(viewPdfUrl, "_blank", "noopener,noreferrer");
+    }
+    function handleDownloadPdf() {
+        window.open(downloadPdfUrl, "_blank", "noopener,noreferrer");
+    }
+    function copy(text, label) {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _b.trys.push([0, 2, , 3]);
+                        return [4 /*yield*/, navigator.clipboard.writeText(text)];
+                    case 1:
+                        _b.sent();
+                        react_hot_toast_1["default"].success(label + " copied");
+                        return [3 /*break*/, 3];
+                    case 2:
+                        _a = _b.sent();
+                        react_hot_toast_1["default"].error("Copy failed");
+                        return [3 /*break*/, 3];
+                    case 3: return [2 /*return*/];
+                }
+            });
+        });
     }
     return (React.createElement(React.Fragment, null,
-        React.createElement(button_1.Button, { size: "icon", variant: "ghost", className: "h-8 w-8", "aria-label": "Download", onClick: handleDownload, title: "Download PDF" },
+        React.createElement(button_1.Button, { size: "icon", variant: "ghost", className: "h-8 w-8", "aria-label": "Export PDF", onClick: handleViewPdf, title: "View PDF" },
             React.createElement(lucide_react_1.Download, { className: "h-4 w-4" })),
         React.createElement(dropdown_menu_1.DropdownMenu, null,
             React.createElement(dropdown_menu_1.DropdownMenuTrigger, { asChild: true },
                 React.createElement(button_1.Button, { size: "icon", variant: "ghost", "aria-label": "More actions" },
                     React.createElement(lucide_react_1.MoreHorizontal, { className: "h-4 w-4" }))),
-            React.createElement(dropdown_menu_1.DropdownMenuContent, { align: "end", className: "w-44" },
+            React.createElement(dropdown_menu_1.DropdownMenuContent, { align: "end", className: "w-56" },
                 React.createElement(dropdown_menu_1.DropdownMenuLabel, null, "Actions"),
                 React.createElement(dropdown_menu_1.DropdownMenuSeparator, null),
                 React.createElement(dropdown_menu_1.DropdownMenuItem, { asChild: true },
-                    React.createElement(link_1["default"], { href: "/resumes/" + resume.id },
+                    React.createElement(link_1["default"], { href: pageUrl },
                         React.createElement(lucide_react_1.FileText, { className: "mr-2 h-4 w-4" }),
                         " Open")),
+                React.createElement(dropdown_menu_1.DropdownMenuItem, { onClick: handleViewPdf },
+                    React.createElement(lucide_react_1.ExternalLink, { className: "mr-2 h-4 w-4" }),
+                    " View PDF"),
+                React.createElement(dropdown_menu_1.DropdownMenuItem, { onClick: handleDownloadPdf },
+                    React.createElement(lucide_react_1.Download, { className: "mr-2 h-4 w-4" }),
+                    " Download PDF"),
+                React.createElement(dropdown_menu_1.DropdownMenuItem, { onClick: function () { return copy(location.origin + pageUrl, "Page URL"); } },
+                    React.createElement(lucide_react_1.Share2, { className: "mr-2 h-4 w-4" }),
+                    " Copy page URL"),
+                React.createElement(dropdown_menu_1.DropdownMenuItem, { onClick: function () { return copy(location.origin + downloadPdfUrl, "Export URL"); } },
+                    React.createElement(lucide_react_1.Copy, { className: "mr-2 h-4 w-4" }),
+                    " Copy export URL"),
+                React.createElement(dropdown_menu_1.DropdownMenuSeparator, null),
                 React.createElement(dropdown_menu_1.DropdownMenuItem, { onClick: handleDuplicate },
                     React.createElement(lucide_react_1.Copy, { className: "mr-2 h-4 w-4" }),
                     " Duplicate"),
@@ -348,18 +392,39 @@ function RowActions(_a) {
                     React.createElement(alert_dialog_1.AlertDialogAction, { className: "bg-destructive hover:bg-destructive/90", onClick: handleDelete }, "Delete"))))));
 }
 /* ------------------------------------------------------------------ */
+/* Sortable head cell                                                  */
+/* ------------------------------------------------------------------ */
+function SortHead(_a) {
+    var children = _a.children, activeKey = _a.activeKey, thisKey = _a.thisKey, sort = _a.sort, setSort = _a.setSort, _b = _a.className, className = _b === void 0 ? "" : _b;
+    var isThis = activeKey === thisKey;
+    var dir = isThis && sort.endsWith("_asc") ? "asc" : isThis && sort.endsWith("_desc") ? "desc" : null;
+    function toggle() {
+        if (!isThis) {
+            setSort(thisKey + "_desc"); // default to desc on first click
+            return;
+        }
+        setSort(dir === "desc" ? thisKey + "_asc" : thisKey + "_desc");
+    }
+    return (React.createElement(table_1.TableHead, { onClick: toggle, className: "cursor-pointer select-none " + className },
+        React.createElement("div", { className: "inline-flex items-center gap-1" },
+            children,
+            " ",
+            React.createElement(lucide_react_1.ArrowUpDown, { className: "h-4 w-4 " + (isThis ? "opacity-100" : "opacity-40") }))));
+}
+/* ------------------------------------------------------------------ */
 /* Table (desktop) + Cards (mobile)                                    */
 /* ------------------------------------------------------------------ */
 function ResumesTable(_a) {
-    var items = _a.items, onChanged = _a.onChanged;
+    var items = _a.items, onChanged = _a.onChanged, sort = _a.sort, setSort = _a.setSort;
+    var activeKey = sort.split("_")[0];
     return (React.createElement("div", { className: "rounded-lg border" },
         React.createElement(table_1.Table, null,
             React.createElement(table_1.TableHeader, null,
                 React.createElement(table_1.TableRow, null,
-                    React.createElement(table_1.TableHead, { className: "w-[50%]" }, "Title"),
+                    React.createElement(SortHead, { activeKey: activeKey, thisKey: "title", sort: sort, setSort: setSort, className: "w-[50%]" }, "Title"),
                     React.createElement(table_1.TableHead, null, "Template"),
-                    React.createElement(table_1.TableHead, null, "ATS"),
-                    React.createElement(table_1.TableHead, null, "Updated"),
+                    React.createElement(SortHead, { activeKey: activeKey, thisKey: "ats", sort: sort, setSort: setSort }, "ATS"),
+                    React.createElement(SortHead, { activeKey: activeKey, thisKey: "updated", sort: sort, setSort: setSort }, "Updated"),
                     React.createElement(table_1.TableHead, { className: "text-right" }, "Actions"))),
             React.createElement(table_1.TableBody, null,
                 items.map(function (r) { return (React.createElement(table_1.TableRow, { key: r.id },
@@ -406,7 +471,7 @@ function ResumesCards(_a) {
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 function ResumesPage() {
-    var _a = useResumes(), loading = _a.loading, error = _a.error, data = _a.data, reload = _a.reload, search = _a.search, setSearch = _a.setSearch, template = _a.template, setTemplate = _a.setTemplate, sort = _a.sort, setSort = _a.setSort, page = _a.page, setPage = _a.setPage;
+    var _a = useResumes(), loading = _a.loading, error = _a.error, data = _a.data, reload = _a.reload, search = _a.search, setSearch = _a.setSearch, template = _a.template, setTemplate = _a.setTemplate, status = _a.status, setStatus = _a.setStatus, sort = _a.sort, setSort = _a.setSort, page = _a.page, setPage = _a.setPage, perPage = _a.perPage, setPerPage = _a.setPerPage;
     var totalPages = Math.max(1, Math.ceil(data.total / data.perPage));
     return (React.createElement("div", { className: "mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6" },
         React.createElement("div", { className: "flex flex-col gap-4 md:flex-row md:items-center md:justify-between" },
@@ -425,7 +490,7 @@ function ResumesPage() {
                     React.createElement(lucide_react_1.RefreshCcw, { className: "mr-2 h-4 w-4 " + (loading ? "animate-spin" : "") }),
                     "Refresh"))),
         React.createElement(separator_1.Separator, { className: "my-4" }),
-        React.createElement("div", { className: "grid gap-3 sm:grid-cols-3" },
+        React.createElement("div", { className: "grid gap-3 sm:grid-cols-4" },
             React.createElement("div", { className: "grid gap-1" },
                 React.createElement(label_1.Label, null, "Template"),
                 React.createElement(select_1.Select, { value: template, onValueChange: function (v) { setTemplate(v); setPage(1); } },
@@ -453,13 +518,22 @@ function ResumesPage() {
                         React.createElement(select_1.SelectItem, { value: "title_desc" }, "Title (Z \u2192 A)")))),
             React.createElement("div", { className: "grid gap-1" },
                 React.createElement(label_1.Label, null, "Status"),
-                React.createElement(select_1.Select, { defaultValue: "any", onValueChange: function () { return react_hot_toast_1["default"]("Status filter not wired to API yet"); } },
+                React.createElement(select_1.Select, { value: status, onValueChange: function (v) { setStatus(v); setPage(1); } },
                     React.createElement(select_1.SelectTrigger, null,
                         React.createElement(select_1.SelectValue, { placeholder: "Any status" })),
                     React.createElement(select_1.SelectContent, null,
                         React.createElement(select_1.SelectItem, { value: "any" }, "Any"),
                         React.createElement(select_1.SelectItem, { value: "draft" }, "Draft"),
-                        React.createElement(select_1.SelectItem, { value: "final" }, "Final"))))),
+                        React.createElement(select_1.SelectItem, { value: "final" }, "Final")))),
+            React.createElement("div", { className: "grid gap-1" },
+                React.createElement(label_1.Label, null, "Per page"),
+                React.createElement(select_1.Select, { value: String(perPage), onValueChange: function (v) { setPerPage(Number(v)); setPage(1); } },
+                    React.createElement(select_1.SelectTrigger, null,
+                        React.createElement(select_1.SelectValue, { placeholder: "10" })),
+                    React.createElement(select_1.SelectContent, null,
+                        React.createElement(select_1.SelectItem, { value: "10" }, "10"),
+                        React.createElement(select_1.SelectItem, { value: "20" }, "20"),
+                        React.createElement(select_1.SelectItem, { value: "50" }, "50"))))),
         React.createElement("div", { className: "mt-6 space-y-4" },
             error && (React.createElement("div", { className: "rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm" },
                 React.createElement("b", null, "Error:"),
@@ -480,7 +554,7 @@ function ResumesPage() {
                             React.createElement(button_1.Button, { asChild: true, variant: "outline" },
                                 React.createElement(link_1["default"], { href: "/templates" }, "Browse Templates"))))))) : (React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "hidden md:block" },
-                    React.createElement(ResumesTable, { items: data.items, onChanged: reload })),
+                    React.createElement(ResumesTable, { items: data.items, onChanged: reload, sort: sort, setSort: setSort })),
                 React.createElement("div", { className: "md:hidden" },
                     React.createElement(ResumesCards, { items: data.items, onChanged: reload })),
                 React.createElement("div", { className: "flex justify-end" },

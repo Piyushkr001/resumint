@@ -107,6 +107,8 @@ exports.resumeEducationsTable = pg_core_1.pgTable("resume_educations", {
     degree: pg_core_1.varchar("degree", { length: 160 }).notNull(),
     field: pg_core_1.varchar("field", { length: 160 }),
     location: pg_core_1.varchar("location", { length: 160 }),
+    gradeType: pg_core_1.text("grade_type"),
+    gradeValue: pg_core_1.text("grade_value"),
     startYear: pg_core_1.smallint("start_year"),
     endYear: pg_core_1.smallint("end_year"),
     achievements: pg_core_1.text("achievements").array(),

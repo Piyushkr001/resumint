@@ -54,6 +54,9 @@ type Education = {
   startYear?: number | null;
   endYear?: number | null;
   achievements?: string[] | null;
+  // NEW:
+  gradeType?: "percentage" | "cgpa10" | "cgpa4" | "gpa" | "letter" | null;
+  gradeValue?: string | null;
 };
 
 type LinkRow = {
@@ -103,6 +106,21 @@ function arrayToLines(a: string[] | null | undefined) {
 
 const uuidSchema = z.string().uuid();
 
+// Pretty print grade in list rows
+function formatGrade(gt?: Education["gradeType"], gv?: string | null) {
+  if (!gt || !gv) return null;
+  const v = String(gv).trim();
+  if (!v) return null;
+  switch (gt) {
+    case "percentage": return `${v.replace(/%$/, "")}%`;
+    case "cgpa10": return `${v}/10`;
+    case "cgpa4": return `${v}/4`;
+    case "gpa": return `${v} GPA`;
+    case "letter": return v.toUpperCase();
+    default: return v;
+  }
+}
+
 /* ---------- Zod forms ---------- */
 const ExpSchema = z.object({
   company: z.string().min(2),
@@ -115,6 +133,7 @@ const ExpSchema = z.object({
 });
 type ExpValues = z.infer<typeof ExpSchema>;
 
+// ✅ Include gradeType & gradeValue in schema
 const EduSchema = z.object({
   school: z.string().min(2),
   degree: z.string().min(2),
@@ -123,6 +142,9 @@ const EduSchema = z.object({
   startYear: z.string().optional(),
   endYear: z.string().optional(),
   achievementsText: z.string().optional(),
+  gradeType: z.enum(["percentage", "cgpa10", "cgpa4", "gpa", "letter"])
+    .or(z.literal("")).optional(),
+  gradeValue: z.string().max(20).optional(),
 });
 type EduValues = z.infer<typeof EduSchema>;
 
@@ -470,6 +492,8 @@ export default function ResumeEditorPage() {
         startYear: editing?.startYear ? String(editing.startYear) : "",
         endYear: editing?.endYear ? String(editing.endYear) : "",
         achievementsText: arrayToLines(editing?.achievements),
+        gradeType: editing?.gradeType ?? "",
+        gradeValue: editing?.gradeValue ?? "",
       },
     });
 
@@ -484,6 +508,8 @@ export default function ResumeEditorPage() {
           startYear: editing.startYear ? String(editing.startYear) : "",
           endYear: editing.endYear ? String(editing.endYear) : "",
           achievementsText: arrayToLines(editing.achievements),
+          gradeType: editing.gradeType ?? "",
+          gradeValue: editing.gradeValue ?? "",
         });
       } else {
         form.reset({
@@ -494,10 +520,15 @@ export default function ResumeEditorPage() {
           startYear: "",
           endYear: "",
           achievementsText: "",
+          gradeType: "",
+          gradeValue: "",
         });
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [editing?.id, open]);
+
+    // ✅ Fix: watch the gradeType so we can use it in placeholder
+    const gradeType = form.watch("gradeType");
 
     function onOpenAdd() {
       setEditId(null);
@@ -518,6 +549,8 @@ export default function ResumeEditorPage() {
         startYear: v.startYear ? Number(v.startYear) : null,
         endYear: v.endYear ? Number(v.endYear) : null,
         achievements: linesToArray(v.achievementsText),
+        gradeType: v.gradeType ? (v.gradeType as Education["gradeType"]) : null,
+        gradeValue: v.gradeValue?.trim() ? v.gradeValue.trim() : null,
       };
 
       const url = editId
@@ -580,6 +613,7 @@ export default function ResumeEditorPage() {
                     {(e.startYear ?? "—")} — {(e.endYear ?? "—")}
                     {e.field ? ` • ${e.field}` : ""}
                     {e.location ? ` • ${e.location}` : ""}
+                    {formatGrade(e.gradeType, e.gradeValue) ? ` • Grade: ${formatGrade(e.gradeType, e.gradeValue)}` : ""}
                   </p>
                 </div>
                 <div className="flex gap-1">
@@ -610,7 +644,7 @@ export default function ResumeEditorPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{editId ? "Edit education" : "Add education"}</DialogTitle>
-              <DialogDescription>School, degree, years, and achievements.</DialogDescription>
+              <DialogDescription>School, degree, years, achievements, and grade.</DialogDescription>
             </DialogHeader>
 
             <form id="edu-form" onSubmit={(e) => e.preventDefault()} className="grid gap-3">
@@ -627,7 +661,7 @@ export default function ResumeEditorPage() {
 
               <div className="grid gap-2 md:grid-cols-2">
                 <div className="grid gap-1">
-                  <Label htmlFor="field">Field</Label>
+                  <Label htmlFor="field">Subjects/Field</Label>
                   <Input id="field" {...form.register("field")} />
                 </div>
                 <div className="grid gap-1">
@@ -644,6 +678,48 @@ export default function ResumeEditorPage() {
                 <div className="grid gap-1">
                   <Label htmlFor="endYear">End year</Label>
                   <Input id="endYear" type="number" {...form.register("endYear")} />
+                </div>
+              </div>
+
+              {/* NEW: Grade */}
+              <div className="grid gap-2 md:grid-cols-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="gradeType">Grade type</Label>
+                  <select
+                    id="gradeType"
+                    className="h-10 w-full rounded-md border bg-transparent px-3 text-sm"
+                    {...form.register("gradeType")}
+                  >
+                    <option value="">Select…</option>
+                    <option value="percentage">Percentage</option>
+                    <option value="cgpa10">CGPA (out of 10)</option>
+                    <option value="cgpa4">CGPA (out of 4)</option>
+                    <option value="gpa">GPA</option>
+                    <option value="letter">Letter (A, A+, etc.)</option>
+                  </select>
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="gradeValue">Grade value</Label>
+                  <Input
+                    id="gradeValue"
+                    placeholder={
+                      gradeType === "percentage" ? "e.g., 82"
+                        : gradeType === "cgpa10" ? "e.g., 8.2"
+                        : gradeType === "cgpa4" ? "e.g., 3.6"
+                        : gradeType === "gpa" ? "e.g., 3.7"
+                        : gradeType === "letter" ? "e.g., A+"
+                        : "—"
+                    }
+                    disabled={!gradeType}
+                    {...form.register("gradeValue")}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {gradeType === "percentage" && "Enter just the number; % will be added automatically."}
+                    {gradeType === "cgpa10" && "Max 10; decimals allowed (e.g., 8.23)."}
+                    {gradeType === "cgpa4" && "Max 4; decimals allowed (e.g., 3.45)."}
+                    {gradeType === "gpa" && "Typical scale is 0–4; enter the number (e.g., 3.7)."}
+                    {gradeType === "letter" && "Enter a letter grade (e.g., A, A+, B+)."}
+                  </p>
                 </div>
               </div>
 
@@ -892,7 +968,7 @@ export default function ResumeEditorPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto w/full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon" aria-label="Back">
             <Link href="/dashboard/resumes"><ArrowLeft className="h-5 w-5" /></Link>
