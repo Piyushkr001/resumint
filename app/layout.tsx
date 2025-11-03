@@ -8,11 +8,6 @@ import Footer from "./_components/Footer";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "react-hot-toast";
 
-// ⬇️ If you followed my earlier step, this provides { user, setUser, ... }
-
-
-// If you already wrap GoogleOAuthProvider / QueryClient / etc. in ./providers,
-// keep it — we’ll nest AuthProvider inside it so Navbar can read auth state.
 import Providers from "./providers";
 import { AuthProvider } from "./(auth)/_components/Session";
 
@@ -28,30 +23,36 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={[
-          ubuntu.className,
-          "min-h-dvh bg-background text-foreground antialiased",
-        ].join(" ")}
-      >
-        {/* App-wide providers (e.g., Google OAuth, QueryClient, etc.) */}
+      <body className={`${ubuntu.className} min-h-dvh bg-background text-foreground antialiased flex flex-col`}>
         <Providers>
-          {/* Auth store so Navbar can react instantly after login/signup */}
           <AuthProvider>
-            {/* ThemeProvider should wrap UI to keep light/dark consistent */}
             <ThemeProvider
               attribute="class"
               defaultTheme="system"
               enableSystem
               disableTransitionOnChange
             >
-              {/* Global chrome */}
-              <Navbar />
-              <main className="min-h-[70dvh]">{children}</main>
-              <Footer />
+              {/* Sticky header stays above content */}
+              <div className="sticky top-0 z-40 bg-background/80 backdrop-blur supports-backdrop-filter:bg-background/60">
+                <Navbar />
+              </div>
 
-              {/* Toasts (theme-aware because inside ThemeProvider) */}
-              <Toaster position="top-center" />
+              {/* Main grows to push footer to the bottom; min-w-0 avoids chart overflow; pb-safe for any fixed bottom UI */}
+              <main className="flex-1 min-w-0 pb-[env(safe-area-inset-bottom)]">
+                {children}
+              </main>
+
+              {/* Footer never goes under overlays */}
+              <div className="mt-auto relative z-10">
+                <Footer />
+              </div>
+
+              {/* Move toasts away from footer + ensure high z-index */}
+              <Toaster
+                position="top-right"
+                toastOptions={{ style: { zIndex: 60 } }}
+                gutter={8}
+              />
             </ThemeProvider>
           </AuthProvider>
         </Providers>

@@ -47,11 +47,10 @@ export default function Hero() {
             />
             <div className="flex gap-3">
               <Button className="h-11 px-5" asChild>
-                <Link href="/signup">Create your resume</Link>
+                <Link href="/resumes/new">Create your resume</Link>
               </Button>
               <Button variant="outline" className="h-11 px-5" asChild>
-                <Link href="/learn
-                \">Lear More</Link>
+                <Link href="/learn">Lear More</Link>
               </Button>
             </div>
           </div>

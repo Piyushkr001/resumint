@@ -42,8 +42,6 @@ var link_1 = require("next/link");
 var react_1 = require("react");
 var lucide_react_1 = require("lucide-react");
 var separator_1 = require("@/components/ui/separator");
-var input_1 = require("@/components/ui/input");
-var button_1 = require("@/components/ui/button");
 var react_2 = require("@phosphor-icons/react");
 function Footer() {
     var _a = react_1.useState(""), email = _a[0], setEmail = _a[1];
@@ -68,9 +66,6 @@ function Footer() {
                         React.createElement(image_1["default"], { src: "/Images/Logo/logo.svg", alt: "Resumint", width: 180, height: 180, className: "block dark:hidden" }),
                         React.createElement(image_1["default"], { src: "/Images/Logo/logo-dark.svg", alt: "Resumint", width: 180, height: 180, className: "hidden dark:block" })),
                     React.createElement("p", { className: "mt-3 max-w-md text-sm text-muted-foreground" }, "Build, score, and tailor ATS-ready resumes. Share a beautiful link and get hired faster."),
-                    React.createElement("form", { onSubmit: onSubscribe, className: "mt-5 flex flex-col gap-3 sm:flex-row" },
-                        React.createElement(input_1.Input, { type: "email", required: true, value: email, onChange: function (e) { return setEmail(e.target.value); }, placeholder: "Join our newsletter", className: "h-11 sm:max-w-xs", "aria-label": "Email address" }),
-                        React.createElement(button_1.Button, { type: "submit", className: "h-11 px-5" }, "Subscribe")),
                     React.createElement("div", { className: "mt-4 flex items-center gap-3 text-muted-foreground" },
                         React.createElement(link_1["default"], { href: "#", "aria-label": "Email" },
                             React.createElement(lucide_react_1.Mail, { className: "h-5 w-5 hover:text-foreground" })),
@@ -81,7 +76,7 @@ function Footer() {
                         React.createElement(link_1["default"], { href: "https://linkedin.com", target: "_blank", "aria-label": "LinkedIn" },
                             React.createElement(lucide_react_1.Linkedin, { className: "h-5 w-5 hover:text-foreground" })))),
                 React.createElement(FooterColumn, { title: "Product", links: [
-                        { label: "Features", href: "/#features" },
+                        { label: "Features", href: "/features" },
                         { label: "Templates", href: "/templates" },
                         { label: "Changelog", href: "/changelog" },
                     ] }),

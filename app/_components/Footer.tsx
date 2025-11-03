@@ -26,7 +26,7 @@ export default function Footer() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Top */}
         <div className="grid grid-cols-1 gap-10 py-12 md:grid-cols-4">
-          {/* Brand + Newsletter */}
+          {/* Brand */}
           <div className="md:col-span-2">
             <div className="flex items-center gap-3">
               {/* Swap with your light/dark logo assets as needed */}
@@ -50,18 +50,7 @@ export default function Footer() {
               Build, score, and tailor ATS-ready resumes. Share a beautiful link and get hired faster.
             </p>
 
-            <form onSubmit={onSubscribe} className="mt-5 flex flex-col gap-3 sm:flex-row">
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Join our newsletter"
-                className="h-11 sm:max-w-xs"
-                aria-label="Email address"
-              />
-              <Button type="submit" className="h-11 px-5">Subscribe</Button>
-            </form>
+            
 
             <div className="mt-4 flex items-center gap-3 text-muted-foreground">
               <Link href="#" aria-label="Email">
@@ -83,7 +72,7 @@ export default function Footer() {
           <FooterColumn
             title="Product"
             links={[
-              { label: "Features", href: "/#features" },
+              { label: "Features", href: "/features" },
               { label: "Templates", href: "/templates" },
               { label: "Changelog", href: "/changelog" },
             ]}
